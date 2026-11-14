@@ -9,8 +9,7 @@
   const heading = find('#zoea-heading');
   const intro = find('.intro');
   const panel = find('.crt-panel');
-  const controls = new Map([...root.querySelectorAll('.wordmark, nav button, .list button')]
-    .map(control=>[control,{dx:0,dy:0}]));
+  const controls = [...root.querySelectorAll('.wordmark, nav button, .list button')];
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   const characters = ' .:-=+x2579%#@';
   const categories = [
@@ -45,41 +44,56 @@
   const titleCtx = titleLayer.getContext('2d',{willReadFrequently:true});
   const labelsCtx = labelsLayer.getContext('2d');
   let refreshLabels;
+  let labelLayout;
 
   function updateHitAreas(w,h) {
     const screen = display.getBoundingClientRect();
     const aspect = w/h;
-    for (const [control,position] of controls) {
+    const areas = controls.map(control=>{
       const box = control.getBoundingClientRect();
-      const nx = 2*(box.left+box.width/2-screen.left-position.dx)/w-1;
-      const ny = 2*(box.top+box.height/2-screen.top-position.dy)/h-1;
-      position.nx = nx;
-      position.ny = ny;
-      position.x = .48*nx*(1+.044*ny*ny+.022*nx*nx)*aspect;
-      position.y = .48*ny*(1+.061*nx*nx+.018*ny*ny);
-    }
+      const left = box.left-screen.left, top = box.top-screen.top;
+      const corners = [[left,top],[left+box.width,top],[left,top+box.height],[left+box.width,top+box.height]]
+        .map(([x,y])=>{
+          const nx = 2*x/w-1, ny = 2*y/h-1;
+          return [nx,ny,.48*nx*(1+.044*ny*ny+.022*nx*nx)*aspect,.48*ny*(1+.061*nx*nx+.018*ny*ny)];
+        });
+      control.style.transformOrigin = '0 0';
+      return {control,left,top,width:box.width,height:box.height,corners};
+    });
 
+    let lastX, lastY;
     root.crtLive.setHitAreaUpdater((x,y)=>{
+      if (Math.abs(x-lastX)<.0003 && Math.abs(y-lastY)<.0003) return;
+      lastX = x;
+      lastY = y;
       // Forward projection of the same tilted plane the CRT shader samples.
       const sx = Math.sin(y*.063), cx = Math.cos(y*.063);
       const sy = Math.sin(-x*.080), cy = Math.cos(-x*.080);
-      for (const [control,position] of controls) {
-        const {nx,ny,x:u,y:v} = position;
-        const depth = 2.3-sy*u+cy*sx*v;
-        const flatX = 2.3*(cy*u+sy*sx*v)/(depth*aspect);
-        const flatY = 2.3*cx*v/depth;
-        let px = nx, py = ny;
-        for (let i=0;i<4;i++) {
-          const curvedX = .48*px*(1+.044*py*py+.022*px*px);
-          const curvedY = .48*py*(1+.061*px*px+.018*py*py);
-          px += 2*(flatX-curvedX);
-          py += 2*(flatY-curvedY);
-        }
-        const dx = (px-nx)*w/2, dy = (py-ny)*h/2;
-        if (Math.abs(position.dx-dx)<.08 && Math.abs(position.dy-dy)<.08) continue;
-        position.dx = dx;
-        position.dy = dy;
-        control.style.translate = `${dx}px ${dy}px`;
+      for (const {control,left,top,width,height,corners} of areas) {
+        const [a,b,c,d] = corners.map(([nx,ny,u,v])=>{
+          const depth = 2.3-sy*u+cy*sx*v;
+          const flatX = 2.3*(cy*u+sy*sx*v)/(depth*aspect);
+          const flatY = 2.3*cx*v/depth;
+          let px = nx, py = ny;
+          for (let i=0;i<5;i++) {
+            const curvedX = .48*px*(1+.044*py*py+.022*px*px);
+            const curvedY = .48*py*(1+.061*px*px+.018*py*py);
+            px += 2*(flatX-curvedX);
+            py += 2*(flatY-curvedY);
+          }
+          return {x:(px+1)*w/2-left,y:(py+1)*h/2-top};
+        });
+        // Map the native focus and pointer area to all four projected corners.
+        const bx = b.x-d.x, by = b.y-d.y, cxEdge = c.x-d.x, cyEdge = c.y-d.y;
+        const ex = a.x-b.x-c.x+d.x, ey = a.y-b.y-c.y+d.y;
+        const determinant = bx*cyEdge-by*cxEdge;
+        const gx = (ex*cyEdge-ey*cxEdge)/determinant;
+        const gy = (bx*ey-by*ex)/determinant;
+        control.style.transform = `matrix3d(${[
+          (b.x*(1+gx)-a.x)/width,(b.y*(1+gx)-a.y)/width,0,gx/width,
+          (c.x*(1+gy)-a.x)/height,(c.y*(1+gy)-a.y)/height,0,gy/height,
+          0,0,1,0,a.x,a.y,0,1
+        ].join(',')})`;
       }
     });
   }
@@ -131,22 +145,47 @@
     return [sourceLayer,diffuseLayer,haloLayer];
   }
 
-  function drawLabels(width,height,scale) {
-    labelsLayer.width = width;
-    labelsLayer.height = height;
+  function measureLabels() {
     const screen = display.getBoundingClientRect();
     const range = document.createRange();
-    const labels = root.querySelectorAll('.wordmark, nav button, .prompt, #zoea-detail, .list button');
-    for (const label of labels) {
+    const layout = [];
+    for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, #zoea-detail, .list button')) {
       if (!label.getClientRects().length) continue;
       const text = label.firstChild;
       if (text?.nodeType !== Node.TEXT_NODE) continue;
-      // Render from the original layout; the DOM translation only moves the hit area.
-      const {dx,dy} = controls.get(label) ?? {dx:0,dy:0};
-      const style = getComputedStyle(label);
+      const lines = [];
+      let line, top = -Infinity;
+      for (let i=0;i<text.length;i++) {
+        range.setStart(text,i);
+        range.setEnd(text,i+1);
+        const box = range.getBoundingClientRect();
+        if (box.top !== top) {
+          top = box.top;
+          line = {text:'',left:box.left-screen.left,middle:top+box.height*.5-screen.top};
+          lines.push(line);
+        }
+        line.text += text.data[i];
+      }
+      const box = label.getBoundingClientRect();
+      const {fontWeight,fontSize,fontFamily} = getComputedStyle(label);
+      layout.push({label,lines,fontWeight,fontSize,fontFamily,left:box.left-screen.left,bottom:box.bottom-screen.top,width:box.width});
+    }
+    return {w:screen.width,h:screen.height,layout};
+  }
+
+  function drawLabels(width,height,scale) {
+    labelsLayer.width = width;
+    labelsLayer.height = height;
+    const {w,h,layout} = labelLayout ?? measureLabels();
+    function sample(left,middle) {
+      const nx = 2*left/w-1, ny = 2*middle/h-1;
+      return [(nx*(1+.044*ny*ny+.022*nx*nx)*.96+1)*width/2,
+        (ny*(1+.061*nx*nx+.018*ny*ny)*.96+1)*height/2];
+    }
+    for (const {label,lines,fontWeight,fontSize,fontFamily,left,bottom,width:boxWidth} of layout) {
       const active = label.getAttribute('aria-pressed') === 'true'
         || label.getAttribute('aria-current') === 'page';
-      labelsCtx.font = style.fontWeight+' '+parseFloat(style.fontSize)*scale+'px '+style.fontFamily;
+      labelsCtx.font = fontWeight+' '+parseFloat(fontSize)*scale+'px '+fontFamily;
       labelsCtx.textBaseline = 'middle';
       labelsCtx.fillStyle = '#fff';
       labelsCtx.globalAlpha = active ? .69 : .56;
@@ -157,41 +196,14 @@
         labelsCtx.shadowBlur = 2.2*scale;
       }
 
-      function drawRun(text,left,middle) {
-        const nx = 2*(left-screen.left-dx)/screen.width-1;
-        const ny = 2*(middle-screen.top-dy)/screen.height-1;
-        const x = (nx*(1+.044*ny*ny+.022*nx*nx)*.96+1)*width/2;
-        const y = (ny*(1+.061*nx*nx+.018*ny*ny)*.96+1)*height/2;
-        labelsCtx.fillText(text,x,y);
+      for (const [index,line] of lines.entries()) {
+        if (index===lines.length-1 && active && label.matches('.list button')) {
+          labelsCtx.fillText('>',...sample(line.left-labelsCtx.measureText('> ').width/scale,line.middle));
+        }
+        labelsCtx.fillText(line.text,...sample(line.left,line.middle));
       }
-
-      let line = '', left = 0, top = -Infinity, middle = 0;
-      for (let i=0;i<text.length;i++) {
-        range.setStart(text,i);
-        range.setEnd(text,i+1);
-        const box = range.getBoundingClientRect();
-        if (box.top !== top) {
-          if (line) drawRun(line,left,middle);
-          line = '';
-          top = box.top;
-          left = box.left;
-          middle = top+box.height*.5;
-        }
-        line += text.data[i];
-      }
-      if (line) {
-        if (active && label.matches('.list button')) {
-          drawRun('>',left-labelsCtx.measureText('> ').width/scale,middle);
-        }
-        drawRun(line,left,middle);
-        if ((active || highlighted) && label.matches('nav button, .list button')) {
-          const box = label.getBoundingClientRect();
-          const nx = 2*(box.left-screen.left-dx)/screen.width-1;
-          const ny = 2*(box.bottom-2-screen.top-dy)/screen.height-1;
-          const x = (nx*(1+.044*ny*ny+.022*nx*nx)*.96+1)*width/2;
-          const y = (ny*(1+.061*nx*nx+.018*ny*ny)*.96+1)*height/2;
-          labelsCtx.fillRect(x,y,box.width*scale,scale*(highlighted ? 1.5 : 1));
-        }
+      if (lines.length && (active || highlighted) && label.matches('nav button, .list button')) {
+        labelsCtx.fillRect(...sample(left,bottom-2),boxWidth*scale,scale*(highlighted ? 1.5 : 1));
       }
       labelsCtx.shadowBlur = 0;
     }
@@ -246,6 +258,8 @@
       return Math.max(0,emblem(u,v)-.034)*limit((y-artTop)*24)*limit((artBottom-y)*24);
     }
     if (root.crtLive) {
+      for (const control of controls) control.style.transform = '';
+      labelLayout = measureLabels();
       updateHitAreas(w,h);
       root.crtLive.setPanel([
         (box.left-screen.left)/w,(box.top-screen.top)/h,
