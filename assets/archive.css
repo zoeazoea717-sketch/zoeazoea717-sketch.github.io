@@ -1,0 +1,90 @@
+#zoea-archive {
+    --gold:#ffd282; --pale:#ffe5ad; --dim:#c39a70;
+    position:relative; isolation:isolate; overflow:hidden;
+    color: var(--pale);
+    font: 14px/1.5 var(--terminal-font);
+    --inset:clamp(18px,6vw,64px);
+  }
+  #zoea-archive * { box-sizing:border-box; }
+  #zoea-archive header {
+    min-height:64px; display:flex; justify-content:space-between; align-items:center;
+    padding:0 var(--inset);
+  }
+  #zoea-archive button { font:inherit; color:inherit; border:0; background:none; padding:0; min-height:44px; }
+  #zoea-archive button:focus-visible { outline:1px solid var(--gold); outline-offset:2px; }
+  #zoea-archive button:hover { color:#fff0c3; text-shadow:0 0 10px #f6a448; }
+  #zoea-archive .wordmark { font-size:18px; font-weight:700; letter-spacing:.13em; text-shadow:0 0 9px #f48b3575; }
+  #zoea-archive nav { display:flex; gap:clamp(9px,2.5vw,28px); }
+  #zoea-archive nav button { padding:0 7px; color:var(--dim); }
+  #zoea-archive nav [aria-current="page"] { color:var(--pale); box-shadow:inset 0 -1px var(--gold); text-shadow:0 0 10px #ff9d43a1; }
+  #zoea-archive main {
+    display:grid; grid-template-rows:minmax(0,1fr) auto; gap:16px;
+    min-height:max(430px,calc(100svh - 64px));
+    padding:clamp(24px,4.3vw,48px) var(--inset) 20px;
+  }
+  #zoea-archive .intro { display:grid; justify-items:start; gap:9px; }
+  #zoea-archive .crt-panel {
+    position:relative;
+    min-height:0; padding:clamp(12px,2vw,22px);
+    grid-column:1; grid-row:1;
+    border:1px solid transparent;
+  }
+  #zoea-archive:not(.crt-live-ready) .crt-panel::before {
+    content:"";
+    position:absolute; inset:-1px; pointer-events:none;
+    border:1px solid #be824d8f;
+    clip-path:polygon(0 0,13% 0,13% 2%,87% 2%,87% 0,100% 0,100% 11%,98% 11%,
+      98% 89%,100% 89%,100% 100%,87% 100%,87% 98%,13% 98%,13% 100%,0 100%,
+      0 89%,2% 89%,2% 11%,0 11%);
+  }
+  #zoea-archive:not(.crt-live-ready) .crt-panel::after {
+    content:"";
+    position:absolute; inset:16px; pointer-events:none;
+    background:
+      repeating-linear-gradient(90deg,#ca8b4654 0 1px,transparent 1px 12.5%),
+      repeating-linear-gradient(0deg,#ca8b4654 0 1px,transparent 1px 16.666%);
+    mask-image:radial-gradient(ellipse at center,#000,transparent 72%);
+  }
+  #zoea-archive.crt-ready header [aria-current="page"] { box-shadow:none; }
+  #zoea-archive.crt-ready :is(header .wordmark,header nav button),
+  #zoea-archive.crt-ready :is(.prompt,#zoea-detail,.list button),
+  #zoea-archive.crt-ready .list button::before {
+    color:transparent;
+    -webkit-text-fill-color:transparent;
+    text-shadow:none;
+    background-image:none;
+  }
+  #zoea-archive .prompt { color:var(--dim); font-size:12px; letter-spacing:.05em; margin:0; }
+  #zoea-archive h1 {
+    margin:0;
+    font:700 clamp(32px,5vw,58px)/1.25 var(--terminal-font);
+    white-space:nowrap;
+  }
+  #zoea-archive.crt-ready h1 { color:transparent; }
+  #zoea-archive .display {
+    position:absolute; inset:0; z-index:-1;
+  }
+  #zoea-archive canvas { display:block; width:100%; height:100%; }
+  #zoea-archive .index {
+    grid-row:2;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+    gap:0 12px;
+    text-shadow:0 0 8px #f5a45450;
+  }
+  #zoea-archive .list { display:flex; gap:clamp(12px,3vw,25px); }
+  #zoea-archive .list button { color:#dcad79; }
+  #zoea-archive .list button[aria-pressed="true"] { color:var(--pale); }
+  #zoea-archive .list button::before { content:">"; visibility:hidden; margin-right:.45em; color:var(--gold); }
+  #zoea-archive .list button:first-child::before { margin-left:-.92em; }
+  #zoea-archive .list button[aria-pressed="true"]::before { visibility:visible; }
+  #zoea-archive #zoea-detail:empty { display:none; }
+  #zoea-archive #zoea-detail {
+    max-width:32em; margin:0; color:#ddba8c; line-height:1.6;
+  }
+  @media(max-width:580px) {
+    #zoea-archive header { min-height:54px; }
+    #zoea-archive main { min-height:max(390px,calc(100svh - 54px)); padding-bottom:12px; }
+    #zoea-archive .intro { gap:7px; }
+    #zoea-archive .index { column-gap:8px; font-size:13px; }
+    #zoea-archive .list { gap:9px; }
+  }

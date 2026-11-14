@@ -1,0 +1,97 @@
+#zoea-monitor .screen {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100svh;
+    min-height: 390px;
+  }
+  #zoea-monitor canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+  #zoea-monitor .fallback {
+    position: absolute;
+    top: 18%; width: 100%; text-align: center;
+    color: #ffd481;
+    font: 900 clamp(58px,16vw,215px)/1 "Arial Black",system-ui,sans-serif;
+    text-shadow: 0 0 24px #f68c36;
+  }
+  #zoea-monitor .screen.ready .fallback { display: none; }
+  #zoea-monitor.crt-live-ready .fallback { display: none; }
+  #zoea-monitor [hidden] { display: none; }
+  #zoea-monitor .portals, #zoea-monitor .terminal {
+    position: absolute;
+    color: #ffe4a8;
+    font: 14px/1.4 var(--terminal-font);
+  }
+  #zoea-monitor .portals {
+    top: clamp(7px,2vw,20px);
+    right: clamp(12px,3.25vw,36px);
+    display: flex;
+    align-items: center;
+    gap: clamp(0px,.6vw,7px);
+    z-index: 1;
+  }
+  #zoea-monitor button {
+    font: inherit;
+    color: inherit;
+  }
+  #zoea-monitor :is(button,.portals a) {
+    min-height: 44px;
+    border: 0;
+    padding: 0 2px;
+    background: transparent;
+  }
+  #zoea-monitor :is(button,.portals a):focus-visible {
+    outline: 1px solid #ffd58c;
+    outline-offset: 3px;
+  }
+  #zoea-monitor .portals [data-platform] {
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    width: 44px;
+  }
+  #zoea-monitor .portals img {
+    display: block;
+    filter: invert(.80) sepia(.60) saturate(1.45) drop-shadow(0 0 4px #ff9d4b85);
+  }
+  #zoea-monitor .portals [data-platform]:is(:hover,:focus-visible) img {
+    filter: invert(.92) sepia(.56) saturate(1.45) drop-shadow(0 0 6px #ff9d4b);
+  }
+  #zoea-monitor.crt-portals-ready .portals img { opacity:0; }
+  #zoea-monitor.crt-portals-ready .portals [data-platform] {
+    transform:translate(var(--portal-x,0px),var(--portal-y,0px));
+  }
+  #zoea-monitor .terminal {
+    top: 48%; left: 50%;
+    transform:translate(calc(-50% + var(--terminal-x,0px)),var(--terminal-y,0px));
+    z-index: 1;
+    padding: 0 12px;
+    display: grid;
+    grid-auto-flow: column;
+    place-content: center;
+    min-height: 44px;
+    font-size: clamp(18px,2.3vw,25px);
+    letter-spacing: .07em;
+    text-shadow: 0 0 4px #ffbf7bb8,0 0 13px #f89547ac,0 0 24px #e079334f;
+  }
+  #zoea-monitor .terminal:hover {
+    color: #fff3cc;
+    text-shadow: 0 0 7px #ffb46b,0 0 22px #ff8536;
+  }
+  #zoea-monitor .terminal-caret {
+    align-self: end;
+    width: .64em;
+    height: .135em;
+    margin: 0 0 .20em .10em;
+    background: #ffcf8a;
+    box-shadow: 0 0 5px #ffbf72,0 0 12px #f89447a8;
+    animation: zoea-caret 1.35s steps(1,end) infinite;
+  }
+  #zoea-monitor.crt-terminal-ready .terminal :is(.terminal-label,.terminal-caret) { opacity:0; animation:none; }
+  #zoea-monitor.crt-terminal-ready .terminal { background:none; text-shadow:none; }
+  @keyframes zoea-caret { 50% { opacity:0; } }
+  @media (prefers-reduced-motion: reduce) {
+    #zoea-monitor .terminal-caret { animation: none; }
+  }
+  @media (max-width: 580px) {
+    #zoea-monitor .terminal { top: 47%; }
+  }
