@@ -1,0 +1,31 @@
+html {
+  color-scheme: dark;
+  background: radial-gradient(ellipse at 24% 30%,#241209,#100905 74%) fixed;
+  --terminal-font: 'Lucida Console','Courier New','Microsoft YaHei UI',monospace;
+}
+body { margin: 0; }
+#crt-screen { position: relative; min-height:100svh; }
+#crt-screen > [hidden] { display:none; }
+#crt-screen.crt-powering .crt-live-ready :is(.terminal,.portals) { visibility:hidden; }
+#crt-backplane, #crt-streams {
+  position:fixed; inset:0; width:100%; height:100%; pointer-events:none;
+}
+a { color: inherit; text-decoration: none; }
+a:focus-visible { outline: 1px solid #ffd58c; outline-offset: 4px; }
+[data-crt] { position: relative; isolation: isolate; }
+[data-crt] canvas.crt-live {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+[data-crt] canvas.crt-signal[hidden] { display: none; }
+[data-crt] .screen > .crt-live { z-index: 0; }
+[data-crt] :is(.terminal, .wordmark, .prompt, #zoea-detail, nav button, .list button, .mode) {
+  text-shadow: 0 0 3px #ffb56d60, 0 0 9px #f181393f;
+}
+@supports (background-clip: text) {
+  [data-crt] :is(.terminal, .wordmark, .prompt, #zoea-detail) {
+    background-image: repeating-linear-gradient(0deg, #b78451 0 1px, currentColor 1px 3px);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
