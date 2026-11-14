@@ -215,7 +215,7 @@ window.createCrt = function createCrt(root) {
   let x = 0, y = 0, targetX = 0, targetY = 0;
   let presence = 0, pointerInside = false;
   let renderScene, lastScene = -Infinity;
-  let animateSignal = true;
+  let animateSignal = true, updateHitAreas;
   let panelBounds = [0,0,0,0], refreshStart = -Infinity;
   let entryCaret = [-1,-1,0,0];
   const cap = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -234,6 +234,7 @@ window.createCrt = function createCrt(root) {
       y += (targetY-y)*(1-Math.exp(-dt*10));
       presence += (Number(pointerInside)-presence)*(1-Math.exp(-dt*14));
     }
+    updateHitAreas?.(x,y);
     const redraw = lastScene === -Infinity || (animateSignal && !reduced.matches && now-lastScene >= 15);
     if (renderScene && (holdHome ? !textureWidth : redraw)) {
       const still = reduced.matches;
@@ -315,6 +316,7 @@ window.createCrt = function createCrt(root) {
 
   root.crtLive = {
     setPanel(bounds) { panelBounds = bounds; },
+    setHitAreaUpdater(update) { updateHitAreas = update; },
     setEntryCaret(bounds) { entryCaret = bounds; },
     present(now) {
       cancelAnimationFrame(frame);

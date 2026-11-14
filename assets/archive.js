@@ -9,6 +9,8 @@
   const heading = find('#zoea-heading');
   const intro = find('.intro');
   const panel = find('.crt-panel');
+  const controls = new Map([...root.querySelectorAll('.wordmark, nav button, .list button')]
+    .map(control=>[control,{dx:0,dy:0}]));
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   const characters = ' .:-=+x2579%#@';
   const categories = [
@@ -43,6 +45,44 @@
   const titleCtx = titleLayer.getContext('2d',{willReadFrequently:true});
   const labelsCtx = labelsLayer.getContext('2d');
   let refreshLabels;
+
+  function updateHitAreas(w,h) {
+    const screen = display.getBoundingClientRect();
+    const aspect = w/h;
+    for (const [control,position] of controls) {
+      const box = control.getBoundingClientRect();
+      const nx = 2*(box.left+box.width/2-screen.left-position.dx)/w-1;
+      const ny = 2*(box.top+box.height/2-screen.top-position.dy)/h-1;
+      position.nx = nx;
+      position.ny = ny;
+      position.x = .48*nx*(1+.044*ny*ny+.022*nx*nx)*aspect;
+      position.y = .48*ny*(1+.061*nx*nx+.018*ny*ny);
+    }
+
+    root.crtLive.setHitAreaUpdater((x,y)=>{
+      // Forward projection of the same tilted plane the CRT shader samples.
+      const sx = Math.sin(y*.063), cx = Math.cos(y*.063);
+      const sy = Math.sin(-x*.080), cy = Math.cos(-x*.080);
+      for (const [control,position] of controls) {
+        const {nx,ny,x:u,y:v} = position;
+        const depth = 2.3-sy*u+cy*sx*v;
+        const flatX = 2.3*(cy*u+sy*sx*v)/(depth*aspect);
+        const flatY = 2.3*cx*v/depth;
+        let px = nx, py = ny;
+        for (let i=0;i<4;i++) {
+          const curvedX = .48*px*(1+.044*py*py+.022*px*px);
+          const curvedY = .48*py*(1+.061*px*px+.018*py*py);
+          px += 2*(flatX-curvedX);
+          py += 2*(flatY-curvedY);
+        }
+        const dx = (px-nx)*w/2, dy = (py-ny)*h/2;
+        if (Math.abs(position.dx-dx)<.08 && Math.abs(position.dy-dy)<.08) continue;
+        position.dx = dx;
+        position.dy = dy;
+        control.style.translate = `${dx}px ${dy}px`;
+      }
+    });
+  }
   const tone = Array.from({length:1024},(_,index)=>{
     const light = index/1023;
     return [
@@ -101,6 +141,8 @@
       if (!label.getClientRects().length) continue;
       const text = label.firstChild;
       if (text?.nodeType !== Node.TEXT_NODE) continue;
+      // Render from the original layout; the DOM translation only moves the hit area.
+      const {dx,dy} = controls.get(label) ?? {dx:0,dy:0};
       const style = getComputedStyle(label);
       const active = label.getAttribute('aria-pressed') === 'true'
         || label.getAttribute('aria-current') === 'page';
@@ -116,10 +158,10 @@
       }
 
       function drawRun(text,left,middle) {
-        const dx = 2*(left-screen.left)/screen.width-1;
-        const dy = 2*(middle-screen.top)/screen.height-1;
-        const x = (dx*(1+.044*dy*dy+.022*dx*dx)*.96+1)*width/2;
-        const y = (dy*(1+.061*dx*dx+.018*dy*dy)*.96+1)*height/2;
+        const nx = 2*(left-screen.left-dx)/screen.width-1;
+        const ny = 2*(middle-screen.top-dy)/screen.height-1;
+        const x = (nx*(1+.044*ny*ny+.022*nx*nx)*.96+1)*width/2;
+        const y = (ny*(1+.061*nx*nx+.018*ny*ny)*.96+1)*height/2;
         labelsCtx.fillText(text,x,y);
       }
 
@@ -144,10 +186,10 @@
         drawRun(line,left,middle);
         if ((active || highlighted) && label.matches('nav button, .list button')) {
           const box = label.getBoundingClientRect();
-          const dy = 2*(box.bottom-2-screen.top)/screen.height-1;
-          const dx = 2*(box.left-screen.left)/screen.width-1;
-          const x = (dx*(1+.044*dy*dy+.022*dx*dx)*.96+1)*width/2;
-          const y = (dy*(1+.061*dx*dx+.018*dy*dy)*.96+1)*height/2;
+          const nx = 2*(box.left-screen.left-dx)/screen.width-1;
+          const ny = 2*(box.bottom-2-screen.top-dy)/screen.height-1;
+          const x = (nx*(1+.044*ny*ny+.022*nx*nx)*.96+1)*width/2;
+          const y = (ny*(1+.061*nx*nx+.018*ny*ny)*.96+1)*height/2;
           labelsCtx.fillRect(x,y,box.width*scale,scale*(highlighted ? 1.5 : 1));
         }
       }
@@ -204,6 +246,7 @@
       return Math.max(0,emblem(u,v)-.034)*limit((y-artTop)*24)*limit((artBottom-y)*24);
     }
     if (root.crtLive) {
+      updateHitAreas(w,h);
       root.crtLive.setPanel([
         (box.left-screen.left)/w,(box.top-screen.top)/h,
         (box.right-screen.left)/w,(box.bottom-screen.top)/h
