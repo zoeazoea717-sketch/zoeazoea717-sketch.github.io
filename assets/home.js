@@ -286,8 +286,10 @@
 
   function drawLogo(target,w,h,time,pointerX,pointerY,still,live) {
     const wide = w/h>1.3;
-    const logoWidth = Math.round(w*(wide?.76:.84));
-    const logoHeight = Math.round(h*(wide?.255:.197));
+    const logoAspect = 4.7;
+    const height = Math.min(h*(wide?.255:.197),w*(wide?.76:.84)/logoAspect);
+    const logoWidth = Math.max(1,Math.round(height*logoAspect));
+    const logoHeight = Math.max(1,Math.round(height));
     const left = (w-logoWidth)/2;
     const top = h*.445-logoHeight;
     const alpha = getLogoMask(logoWidth,logoHeight);
