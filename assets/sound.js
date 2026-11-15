@@ -83,6 +83,7 @@
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
     if (control.matches('.terminal')) play('enter');
     else if (control.matches('.wordmark')) play('return');
+    else if (control.matches('.file-tile,.file-action[href^="#projects/"]')) play('qq-open');
     else play('select');
   }
   screen.addEventListener('click',playControlCue,{capture:true});
