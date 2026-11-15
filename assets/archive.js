@@ -14,6 +14,7 @@
   const fileDetails = new Map([...root.querySelectorAll('.file-properties')]
     .map(detail=>[detail.dataset.fileId ?? 'film-scan-helper',detail]));
   const fileIcons = [...root.querySelectorAll('.file-icon')];
+  const paintedIcons = new WeakSet();
   const qqDialog = find('#zoea-qq');
   const qqButton = find('[aria-controls="zoea-qq"]');
   const qqIcon = qqButton.querySelector('img');
@@ -172,6 +173,7 @@
       const {left,top,width,height} = measureBox(icon);
       return {x:left+width/2,y:top+height/2,width,height};
     }
+    const divider = openFile?.querySelector('.file-divider');
     return {layout,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
@@ -179,7 +181,8 @@
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
       properties:openFile ? {
         box:measureBox(openFile),bar:measureBox(openFile.querySelector('.file-bar')),
-        footer:measureBox(openFile.querySelector('.file-actions'))
+        footer:measureBox(openFile.querySelector('.file-actions')),
+        divider:divider ? measureBox(divider) : null
       } : null,
       actions:openFile ? [...openFile.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : []
     };
@@ -192,6 +195,7 @@
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
     const {layout,soundIcon,contactIcon,tiles,properties,files,actions} = labelLayout ?? measureLabels();
+    for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
       labelsCtx.strokeStyle = '#fff';
@@ -203,7 +207,7 @@
         if (highlighted(tile)) outline(box,.36);
       }
       if (properties) {
-        const {box,bar,footer} = properties;
+        const {box,bar,footer,divider} = properties;
         outline(box,.42);
         labelsCtx.fillStyle = '#fff';
         labelsCtx.globalAlpha = .10;
@@ -211,6 +215,10 @@
         labelsCtx.globalAlpha = .40;
         for (const y of [bar.top+bar.height,footer.top]) {
           labelsCtx.fillRect(box.left,y-.5,box.width,1);
+        }
+        if (divider) {
+          labelsCtx.globalAlpha = .36;
+          labelsCtx.fillRect(divider.left,divider.top,divider.width,divider.height);
         }
         for (const {action,...box} of actions) {
           outline(box,highlighted(action) ? .75 : action.matches('.file-download') ? .46 : .30);
@@ -311,19 +319,21 @@
     titleCtx.stroke();
   }
 
-  function paintFileIcons() {
-    const size = 68;
-    for (const [kind,paint] of [['film',paintFilmIcon],['gwent',paintGwentIcon]]) {
-      titleLayer.width = titleLayer.height = size;
-      titleCtx.strokeStyle = '#fff';
-      titleCtx.fillStyle = '#fff';
-      titleCtx.lineWidth = 2;
-      paint();
-      const {data} = titleCtx.getImageData(0,0,size,size);
-      for (const icon of fileIcons.filter(icon=>(icon.dataset.icon ?? 'film')===kind)) {
-        drawPhosphorDots(icon.getContext('2d'),data,size,size,2,0,0);
-      }
-    }
+  function paintFileIcon(icon,width,density) {
+    const size = Math.max(1,Math.ceil(width*density));
+    if (icon.width===size && paintedIcons.has(icon)) return;
+    icon.width = icon.height = size;
+    titleLayer.width = titleLayer.height = size;
+    const unit = size/68;
+    titleCtx.setTransform(unit,0,0,unit,0,0);
+    titleCtx.strokeStyle = '#fff';
+    titleCtx.fillStyle = '#fff';
+    titleCtx.lineWidth = 2;
+    if (icon.dataset.icon==='gwent') paintGwentIcon();
+    else paintFilmIcon();
+    const {data} = titleCtx.getImageData(0,0,size,size);
+    drawPhosphorDots(icon.getContext('2d'),data,size,size,2*density,0,0);
+    paintedIcons.add(icon);
   }
 
   function drawHeading(width,height,scale) {
@@ -581,7 +591,6 @@
     root.addEventListener(event,updateLabelHighlight);
   }
   qqIcon.addEventListener('load',updateLabelHighlight);
-  paintFileIcons();
   new ResizeObserver(()=>render()).observe(display);
 
 })();
