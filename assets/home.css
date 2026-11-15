@@ -29,6 +29,20 @@
     gap: clamp(0px,.6vw,7px);
     z-index: 1;
   }
+  #zoea-monitor :is(.crt-mute,.crt-language) { top: clamp(7px,2vw,20px); }
+  #zoea-monitor .crt-language { left: calc(var(--mute-inset) + 44px); }
+  #zoea-monitor .crt-language-label {
+    width: 24px;
+    height: 20px;
+    color: #ffdca3;
+    font: 700 16px/20px var(--terminal-font);
+    text-align: center;
+    text-shadow: 0 0 4px #ff9d4bab;
+  }
+  #zoea-monitor .crt-language:is(:hover,:focus-visible) .crt-language-label {
+    color: #fff0c3;
+    text-shadow: 0 0 6px #ff9d4b;
+  }
   #zoea-monitor button {
     font: inherit;
     color: inherit;
@@ -56,8 +70,8 @@
   #zoea-monitor .portals [data-platform]:is(:hover,:focus-visible) img {
     filter: invert(.92) sepia(.56) saturate(1.45) drop-shadow(0 0 6px #ff9d4b);
   }
-  #zoea-monitor.crt-portals-ready .portals img { opacity:0; }
-  #zoea-monitor.crt-portals-ready .portals [data-platform] {
+  #zoea-monitor.crt-portals-ready :is(.portals img,.crt-language-label) { opacity:0; }
+  #zoea-monitor.crt-portals-ready :is(.portals [data-platform],.crt-mute,.crt-language) {
     transform:translate(var(--portal-x,0px),var(--portal-y,0px));
   }
   #zoea-monitor .terminal {

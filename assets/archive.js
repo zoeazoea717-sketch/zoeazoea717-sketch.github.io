@@ -7,30 +7,29 @@
   const ctx = canvas.getContext('2d');
   const list = find('.list');
   const heading = find('#zoea-heading');
-  const intro = find('.intro');
   const panel = find('.crt-panel');
-  const controls = [...root.querySelectorAll('.wordmark, nav button, .list button')];
+  const aboutContent = find('.about-content');
+  const fileGrid = find('.file-grid');
+  const fileProperties = find('.file-properties');
+  const fileTile = find('.file-tile');
+  const fileIcons = [...root.querySelectorAll('.file-icon')];
+  const qqDialog = find('#zoea-qq');
+  const qqButton = find('[aria-controls="zoea-qq"]');
+  const qqIcon = qqButton.querySelector('img');
+  const qqGlass = qqDialog.querySelector('.qq-glass');
+  const qqCode = qqDialog.querySelector('.qq-code');
+  const qqSource = qqCode.querySelector('.crt-signal');
+  const controls = [...root.querySelectorAll('header a, header button, .list button, .about-contact, .file-tile, .file-action')];
+  const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
-  const characters = ' .:-=+x2579%#@';
-  const categories = [
-    ['作品','WORKS'],
-    ['插件','PLUGINS'],
-    ['MOD','MOD']
-  ];
   let current = 'project';
   let selected = 0;
+  let fileOpen = false;
   const limit = n => Math.max(0,Math.min(1,n));
   const soft = n => Math.exp(-n*n);
   function grain(x,y) {
     const value = Math.sin(x*127.1+y*311.7)*43758.5453;
     return value-Math.floor(value);
-  }
-
-  function emblem(x,y) {
-    const r = Math.hypot((x-.5)*1.86,y-.5);
-    const angle = Math.atan2(y-.5,(x-.5)*1.86);
-    const hex = .25+.025*Math.cos(6*angle);
-    return .034+.47*soft((r-.36)/.011)+.36*soft((r-.30)/.022)+.52*soft((r-hex)/.017)+.34*soft(r/.10);
   }
 
   const sourceLayer = document.createElement('canvas');
@@ -43,19 +42,29 @@
   const haloCtx = haloLayer.getContext('2d');
   const titleCtx = titleLayer.getContext('2d',{willReadFrequently:true});
   const labelsCtx = labelsLayer.getContext('2d');
+  // Keep small glyph strokes intact between the brighter phosphor dots.
+  const textCell = document.createElement('canvas');
+  textCell.width = textCell.height = 2;
+  const textCellCtx = textCell.getContext('2d');
+  textCellCtx.fillStyle = 'rgba(255,255,255,.72)';
+  textCellCtx.fillRect(0,0,2,2);
+  textCellCtx.fillStyle = '#fff';
+  textCellCtx.fillRect(0,0,1,1);
+  const textPhosphor = labelsCtx.createPattern(textCell,'repeat');
+  const graphemes = new Intl.Segmenter();
   let refreshLabels;
   let labelLayout;
 
   function updateHitAreas(w,h) {
     const screen = display.getBoundingClientRect();
     const aspect = w/h;
-    const areas = controls.map(control=>{
+    const areas = controls.filter(control=>control.getClientRects().length).map(control=>{
       const box = control.getBoundingClientRect();
       const left = box.left-screen.left, top = box.top-screen.top;
       const corners = [[left,top],[left+box.width,top],[left,top+box.height],[left+box.width,top+box.height]]
         .map(([x,y])=>{
           const nx = 2*x/w-1, ny = 2*y/h-1;
-          return [nx,ny,.48*nx*(1+.044*ny*ny+.022*nx*nx)*aspect,.48*ny*(1+.061*nx*nx+.018*ny*ny)];
+          return [nx,ny,nx*.5*aspect,ny*.5];
         });
       control.style.transformOrigin = '0 0';
       return {control,left,top,width:box.width,height:box.height,corners};
@@ -106,7 +115,7 @@
     ];
   });
 
-  function drawSignal(signal,width,height,scale,time=0,still=true,live=false) {
+  function drawSignal(width,height,scale,live=false) {
     for (const layer of [sourceLayer,diffuseLayer,haloLayer]) {
       if (layer.width !== width || layer.height !== height) {
         layer.width = width;
@@ -114,25 +123,6 @@
       }
     }
     sourceCtx.clearRect(0,0,width,height);
-    sourceCtx.textAlign = 'center';
-    sourceCtx.textBaseline = 'middle';
-    const pitch = (width/scale < 420 ? 4 : 5.5)*scale;
-    sourceCtx.font = '700 '+pitch*1.37+'px Consolas, monospace';
-    for (let y=pitch*.5;y<height;y+=pitch*1.15) {
-      for (let x=pitch*.5;x<width;x+=pitch) {
-        const luminance = signal(x/width,y/height);
-        if (luminance<.028) continue;
-        // Dither belongs to the emblem, never the empty CRT foreground.
-        const light = limit(luminance+(grain(x,y)-.5)*Math.min(.10,luminance));
-        const phase = time*.24-x/width;
-        const sweep = still ? 0 : soft((phase-Math.round(phase))/.076);
-        const index = Math.round(limit(light*(1+.22*sweep))*(characters.length-1));
-        if (index===0) continue;
-        sourceCtx.fillStyle = 'rgba(255,255,255,'+Math.min(1,.18+light*1.36)+')';
-        const refreshed = !still && sweep>.45 && index>=3 && index<characters.length-1;
-        sourceCtx.fillText(characters[index+(refreshed ? 1 : 0)],x,y);
-      }
-    }
     drawHeading(width,height,scale);
     sourceCtx.drawImage(labelsLayer,0,0);
     if (live) return sourceLayer;
@@ -149,64 +139,157 @@
     const screen = display.getBoundingClientRect();
     const range = document.createRange();
     const layout = [];
-    for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, #zoea-detail, .list button')) {
+    for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, .about-content :is(h2,p), .list button, [data-file-text]')) {
       if (!label.getClientRects().length) continue;
+      if (!root.crtLive && (aboutContent.contains(label) || label.hasAttribute('data-file-text'))) continue;
       const text = label.firstChild;
       if (text?.nodeType !== Node.TEXT_NODE) continue;
+      const {fontWeight,fontSize,fontFamily,textAlign} = getComputedStyle(label);
+      const justify = textAlign==='justify' && label.matches('.file-description p');
       const lines = [];
       let line, top = -Infinity;
-      for (let i=0;i<text.length;i++) {
-        range.setStart(text,i);
-        range.setEnd(text,i+1);
+      for (const {segment,index} of graphemes.segment(text.data)) {
+        range.setStart(text,index);
+        range.setEnd(text,index+segment.length);
         const box = range.getBoundingClientRect();
         if (box.top !== top) {
           top = box.top;
-          line = {text:'',left:box.left-screen.left,middle:top+box.height*.5-screen.top};
+          line = {text:'',left:box.left-screen.left,middle:top+box.height*.5-screen.top,glyphs:justify ? [] : null};
           lines.push(line);
         }
-        line.text += text.data[i];
+        line.text += segment;
+        if (justify && segment.trim()) line.glyphs.push({segment,left:box.left-screen.left});
       }
       const box = label.getBoundingClientRect();
-      const {fontWeight,fontSize,fontFamily} = getComputedStyle(label);
       layout.push({label,lines,fontWeight,fontSize,fontFamily,left:box.left-screen.left,bottom:box.bottom-screen.top,width:box.width});
     }
-    return {w:screen.width,h:screen.height,layout};
+    function measureBox(element) {
+      const box = element.getBoundingClientRect();
+      return {left:box.left-screen.left,top:box.top-screen.top,width:box.width,height:box.height};
+    }
+    function measureIcon(icon) {
+      const {left,top,width,height} = measureBox(icon);
+      return {x:left+width/2,y:top+height/2,width,height};
+    }
+    return {layout,
+      soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
+      files:fileIcons.filter(icon=>icon.getClientRects().length).map(icon=>({icon,...measureIcon(icon)})),
+      tile:fileGrid.hidden ? null : measureBox(fileTile),
+      properties:fileProperties.hidden ? null : {
+        box:measureBox(fileProperties),bar:measureBox(find('.file-bar')),footer:measureBox(find('.file-actions'))
+      },
+      actions:fileProperties.hidden ? [] : [...root.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)}))
+    };
   }
 
-  function drawLabels(width,height,scale) {
+  function drawLabels(width,height) {
     labelsLayer.width = width;
     labelsLayer.height = height;
-    const {w,h,layout} = labelLayout ?? measureLabels();
-    function sample(left,middle) {
-      const nx = 2*left/w-1, ny = 2*middle/h-1;
-      return [(nx*(1+.044*ny*ny+.022*nx*nx)*.96+1)*width/2,
-        (ny*(1+.061*nx*nx+.018*ny*ny)*.96+1)*height/2];
+    // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
+    const scaleX = width/display.clientWidth;
+    labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
+    const {layout,soundIcon,contactIcon,tile,properties,files,actions} = labelLayout ?? measureLabels();
+    if (root.crtLive) {
+      const highlighted = control=>control.matches(':hover,:focus-visible');
+      labelsCtx.strokeStyle = '#fff';
+      function outline({left,top,width,height},alpha) {
+        labelsCtx.globalAlpha = alpha;
+        labelsCtx.strokeRect(left,top,width,height);
+      }
+      if (tile && highlighted(fileTile)) outline(tile,.36);
+      if (properties) {
+        const {box,bar,footer} = properties;
+        outline(box,.42);
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.globalAlpha = .10;
+        labelsCtx.fillRect(box.left,box.top,box.width,bar.top+bar.height-box.top);
+        labelsCtx.globalAlpha = .40;
+        for (const y of [bar.top+bar.height,footer.top]) {
+          labelsCtx.fillRect(box.left,y-.5,box.width,1);
+        }
+        for (const {action,...box} of actions) {
+          outline(box,highlighted(action) ? .75 : action.matches('.file-download') ? .46 : .30);
+        }
+      }
+      for (const {icon,x,y,width,height} of files) {
+        labelsCtx.globalAlpha = tile && highlighted(fileTile) ? 1 : .80;
+        labelsCtx.drawImage(icon,x-width/2,y-height/2,width,height);
+      }
     }
     for (const {label,lines,fontWeight,fontSize,fontFamily,left,bottom,width:boxWidth} of layout) {
       const active = label.getAttribute('aria-pressed') === 'true'
         || label.getAttribute('aria-current') === 'page';
-      labelsCtx.font = fontWeight+' '+parseFloat(fontSize)*scale+'px '+fontFamily;
+      labelsCtx.font = fontWeight+' '+fontSize+' '+fontFamily;
       labelsCtx.textBaseline = 'middle';
-      labelsCtx.fillStyle = '#fff';
-      labelsCtx.globalAlpha = active ? .69 : .56;
-      const highlighted = label === document.activeElement || label.matches(':hover');
+      const fileText = label.hasAttribute('data-file-text');
+      labelsCtx.fillStyle = fileText ? textPhosphor : '#fff';
+      const descriptionHeading = label.matches('h2,h3');
+      labelsCtx.globalAlpha = fileText ? .91 : active ? .69 : descriptionHeading ? .74 : .56;
+      const highlighted = label === document.activeElement || label.matches(':hover') ||
+        label.matches('.file-name') && fileTile.matches(':hover,:focus-visible');
       if (highlighted) {
-        labelsCtx.globalAlpha = .88;
+        labelsCtx.globalAlpha = fileText ? 1 : .88;
         labelsCtx.shadowColor = '#fff';
-        labelsCtx.shadowBlur = 2.2*scale;
+        labelsCtx.shadowBlur = fileText ? 0 : 2.2*scaleX;
       }
 
       for (const [index,line] of lines.entries()) {
         if (index===lines.length-1 && active && label.matches('.list button')) {
-          labelsCtx.fillText('>',...sample(line.left-labelsCtx.measureText('> ').width/scale,line.middle));
+          labelsCtx.fillText('>',line.left-labelsCtx.measureText('> ').width,line.middle);
         }
-        labelsCtx.fillText(line.text,...sample(line.left,line.middle));
+        if (line.glyphs) {
+          for (const {segment,left} of line.glyphs) labelsCtx.fillText(segment,left,line.middle);
+        } else {
+          labelsCtx.fillText(line.text,line.left,line.middle);
+        }
       }
       if (lines.length && (active || highlighted) && label.matches('nav button, .list button')) {
-        labelsCtx.fillRect(...sample(left,bottom-2),boxWidth*scale,scale*(highlighted ? 1.5 : 1));
+        labelsCtx.fillRect(left,bottom-2,boxWidth,highlighted ? 1.5 : 1);
       }
       labelsCtx.shadowBlur = 0;
     }
+    if (root.crtLive && soundIcon.width) {
+      window.drawCrtSoundIcon(labelsCtx,soundButton,soundIcon.x,soundIcon.y,soundIcon.width);
+    }
+    if (root.crtLive && contactIcon.width && qqIcon.complete && qqIcon.naturalWidth) {
+      const {x,y,width:w,height:h} = contactIcon;
+      labelsCtx.globalAlpha = qqButton.matches(':hover,:focus-visible') ? .99 : .82;
+      labelsCtx.drawImage(qqIcon,x-w/2,y-h/2,w,h);
+      qqButton.classList.add('crt-icon-ready');
+    }
+  }
+
+  function drawPhosphorDots(target,pixels,width,height,pitch,x,y) {
+    for (let row=0;row<height;row+=pitch) {
+      for (let col=0;col<width;col+=pitch) {
+        const alpha = pixels[(Math.floor(row)*width+Math.floor(col))*4+3]/255;
+        if (alpha<.25) continue;
+        const strength = alpha*(.63+.27*grain(col,row));
+        target.fillStyle = 'rgba(255,255,255,'+strength+')';
+        target.fillRect(x+col,y+row,pitch*.85,pitch*.78);
+      }
+    }
+  }
+
+  function paintFileIcons() {
+    const size = 68;
+    titleLayer.width = titleLayer.height = size;
+    titleCtx.strokeStyle = '#fff';
+    titleCtx.fillStyle = '#fff';
+    titleCtx.lineWidth = 2;
+    titleCtx.strokeRect(5,12,58,44);
+    titleCtx.strokeRect(10,24,22,20);
+    titleCtx.strokeRect(36,24,22,20);
+    for (let x=10;x<=54;x+=8) {
+      titleCtx.fillRect(x,16,4,4);
+      titleCtx.fillRect(x,48,4,4);
+    }
+    titleCtx.fillRect(14,28,4,4);
+    titleCtx.fillRect(22,36,6,4);
+    titleCtx.fillRect(40,36,8,4);
+    titleCtx.fillRect(48,32,6,8);
+    const {data} = titleCtx.getImageData(0,0,size,size);
+    for (const icon of fileIcons) drawPhosphorDots(icon.getContext('2d'),data,size,size,2,0,0);
   }
 
   function drawHeading(width,height,scale) {
@@ -220,20 +303,10 @@
     titleCtx.fillStyle = '#fff';
     titleCtx.fillText(heading.textContent,0,box.height*scale/2);
     const text = titleCtx.getImageData(0,0,titleLayer.width,titleLayer.height).data;
-    const dx = (box.left-screen.left)/screen.width*2-1;
-    const dy = (box.top-screen.top)/screen.height*2-1;
-    const x = (dx*(1+.044*dy*dy+.022*dx*dx)*.96+1)*width/2;
-    const y = (dy*(1+.061*dx*dx+.018*dy*dy)*.96+1)*height/2;
+    const x = (box.left-screen.left)*width/display.clientWidth;
+    const y = (box.top-screen.top)*height/display.clientHeight;
     const pitch = Math.max(2,2.05*scale);
-    for (let row=0;row<titleLayer.height;row+=pitch) {
-      for (let col=0;col<titleLayer.width;col+=pitch) {
-        const alpha = text[(Math.floor(row)*titleLayer.width+Math.floor(col))*4+3]/255;
-        if (alpha<.25) continue;
-        const strength = alpha*(.63+.27*grain(col,row));
-        sourceCtx.fillStyle = 'rgba(255,255,255,'+strength+')';
-        sourceCtx.fillRect(x+col,y+row,pitch*.85,pitch*.78);
-      }
-    }
+    drawPhosphorDots(sourceCtx,text,titleLayer.width,titleLayer.height,pitch,x,y);
   }
 
   function render() {
@@ -241,22 +314,7 @@
     const h = display.clientHeight;
     if (w<2 || h<2) return;
     const screen = display.getBoundingClientRect();
-    const mobile = w<580;
-    const artTop = (intro.getBoundingClientRect().bottom-screen.top+(mobile ? 13 : 18))/h;
     const box = panel.getBoundingClientRect();
-    const artBottom = (box.bottom-screen.top-12)/h;
-    const center = .50;
-    const middle = (artTop+artBottom)/2;
-    const span = Math.max(.11,artBottom-artTop);
-    const subjectWidth = mobile ? 1 : 1.02;
-    const subjectHeight = Math.min(span*1.34,w*subjectWidth/(1.86*h));
-    function signal(x,y,time,still) {
-      if (current!=='about') return 0;
-      const drift = still ? 0 : .008*Math.sin(time*.42);
-      const u = .5+(x-center-drift)/subjectWidth;
-      const v = .5+(y-middle)/subjectHeight;
-      return Math.max(0,emblem(u,v)-.034)*limit((y-artTop)*24)*limit((artBottom-y)*24);
-    }
     if (root.crtLive) {
       for (const control of controls) control.style.transform = '';
       labelLayout = measureLabels();
@@ -267,22 +325,21 @@
       ]);
       const scale = Math.min(Math.max(1,devicePixelRatio || 1),2.5,Math.sqrt(7500000/(w*h)));
       const width = Math.round(w*scale), height = Math.round(h*scale);
-      refreshLabels = ()=>drawLabels(width,height,scale);
+      refreshLabels = ()=>drawLabels(width,height);
       refreshLabels();
-      root.crtLive.setScene((time,_x,_y,still)=>
-        drawSignal((u,v)=>signal(u,v,time,still),width,height,scale,time,still,true),current==='about');
+      root.crtLive.setScene(()=>drawSignal(width,height,scale,true),false);
       root.classList.add('crt-ready');
     } else {
-      renderFallback((u,v)=>signal(u,v,0,true),w,h);
+      renderFallback(w,h);
     }
   }
 
-  function renderFallback(signal,w,h) {
+  function renderFallback(w,h) {
     const scale = Math.min(Math.max(devicePixelRatio || 1,1.25),1.6,1400/w,1050/h);
     const width = canvas.width = Math.round(w*scale);
     const height = canvas.height = Math.round(h*scale);
-    drawLabels(width,height,scale);
-    const [source,diffuse,halo] = drawSignal(signal,width,height,scale)
+    drawLabels(width,height);
+    const [source,diffuse,halo] = drawSignal(width,height,scale)
       .map(layer=>layer.getContext('2d').getImageData(0,0,width,height).data);
     const pixels = ctx.createImageData(width,height);
     const pitch = Math.max(2.2,height/180);
@@ -325,11 +382,19 @@
 
   function updateContent() {
     const about = current==='about';
-    const [label, path] = categories[selected];
-    heading.textContent = about ? '关于 ZOEA' : label;
-    find('#zoea-directory').textContent = about ? 'C:\\ZOEA\\ABOUT>' : 'C:\\ZOEA\\PROJECTS\\'+path+'>';
-    find('#zoea-detail').textContent = about ? '拍黑白胶片，做影像工具，也尝试游戏 Mod 和 UE。' : '';
-    canvas.setAttribute('aria-label',about ? '琥珀色字符绘制的图形' : label);
+    const category = list.children[selected];
+    const path = category.dataset.category.toUpperCase();
+    const {text} = window.zoeaLocale;
+    const label = about ? text('aboutHeading','关于 ZOEA') : fileOpen ? text('fileDetails','文件详情') : category.textContent;
+    heading.textContent = label;
+    find('#zoea-directory').textContent = about ? 'C:\\ZOEA\\ABOUT>' :
+      'C:\\ZOEA\\PROJECTS\\'+path+(fileOpen ? '\\FILM-SCAN-HELPER' : '')+'>';
+    root.dataset.view = current;
+    root.toggleAttribute('data-file-open',fileOpen);
+    aboutContent.hidden = !about;
+    fileGrid.hidden = about || fileOpen || path!=='PLUGINS';
+    fileProperties.hidden = !fileOpen;
+    canvas.setAttribute('aria-label',label);
     [...list.children].forEach((button,i)=>button.setAttribute('aria-pressed',String(!about && i===selected)));
     root.querySelectorAll('[data-page]').forEach(button=>{
       if (button.dataset.page===current) button.setAttribute('aria-current','page');
@@ -349,36 +414,138 @@
     }
   }
 
+  let qqDisplayInitialized = false;
+  function initializeQqDisplay() {
+    if (qqDisplayInitialized || !qqDialog.open || !qqSource.naturalWidth) return;
+    qqDisplayInitialized = true;
+    window.createCrt(qqCode,{closeup:true});
+    if (!qqCode.crtLive) return;
+    const signal = document.createElement('canvas');
+    const target = signal.getContext('2d',{willReadFrequently:true});
+    qqCode.crtLive.setScene(()=>{
+      const cssSize = qqCode.clientWidth;
+      const density = Math.min(Math.max(1,devicePixelRatio),2.5);
+      const size = Math.round(cssSize*density);
+      if (signal.width===size && signal.height===size) return signal;
+      signal.width = signal.height = size;
+      target.drawImage(qqSource,0,0,size,size);
+      const {data} = target.getImageData(0,0,size,size);
+      target.clearRect(0,0,size,size);
+      // A faint continuous core preserves the contrast of each code module.
+      target.globalAlpha = .49;
+      target.drawImage(qqSource,0,0,size,size);
+      target.globalAlpha = 1;
+      drawPhosphorDots(target,data,size,size,2.05*density,0,0);
+      return signal;
+    },false);
+    new ResizeObserver(()=>qqCode.crtLive.invalidate()).observe(qqCode);
+  }
+  qqSource.addEventListener('load',initializeQqDisplay);
+
+  let qqClosing;
+  let qqPointerFrame = 0;
+  function setQqPerspective(x,y) {
+    qqGlass.style.setProperty('--qq-tilt-x',`${-y*4.2}deg`);
+    qqGlass.style.setProperty('--qq-tilt-y',`${x*5.1}deg`);
+    qqGlass.style.setProperty('--qq-light-x',`${50+x*39}%`);
+    qqGlass.style.setProperty('--qq-light-y',`${50+y*39}%`);
+  }
+  function resetQqPerspective() {
+    cancelAnimationFrame(qqPointerFrame);
+    qqPointerFrame = 0;
+    setQqPerspective(0,0);
+  }
+  qqDialog.addEventListener('pointermove',event=>{
+    if (!qqDialog.open || qqClosing || reduced.matches || event.pointerType==='touch') return;
+    cancelAnimationFrame(qqPointerFrame);
+    const {clientX,clientY} = event;
+    qqPointerFrame = requestAnimationFrame(()=>{
+      qqPointerFrame = 0;
+      // The dialog box stays flat, so its coordinates are stable as its contents tilt.
+      const box = qqDialog.getBoundingClientRect();
+      const x = 2*limit((clientX-box.left)/box.width)-1;
+      const y = 2*limit((clientY-box.top)/box.height)-1;
+      setQqPerspective(x,y);
+    });
+  },{passive:true});
+  qqDialog.addEventListener('pointerleave',resetQqPerspective);
+  reduced.addEventListener('change',resetQqPerspective);
+
+  function resetQqAnimation() {
+    qqClosing?.cancel();
+    qqClosing = null;
+    resetQqPerspective();
+  }
+  function playQqCue(open) {
+    qqDialog.dispatchEvent(new CustomEvent('crt-qq-toggle',{bubbles:true,detail:open}));
+  }
+  function closeQq(event) {
+    event.preventDefault();
+    if (!qqDialog.open || qqClosing) return;
+    cancelAnimationFrame(qqPointerFrame);
+    playQqCue(false);
+    if (reduced.matches) {
+      qqDialog.close();
+      return;
+    }
+    qqClosing = qqGlass.animate([
+      {clipPath:getComputedStyle(qqGlass).clipPath,filter:'brightness(1)',opacity:1},
+      {clipPath:'inset(49.3% 0)',filter:'brightness(2.3)',opacity:1,offset:.68},
+      {clipPath:'inset(49.9% 46%)',filter:'brightness(2.5)',opacity:0}
+    ],{duration:155,easing:'ease-in',fill:'forwards'});
+    qqClosing.finished.then(()=>qqDialog.close(),()=>{});
+  }
+  qqButton.addEventListener('click',()=>{
+    if (qqDialog.open) return;
+    resetQqAnimation();
+    qqDialog.showModal();
+    initializeQqDisplay();
+    playQqCue(true);
+  });
+  qqDialog.addEventListener('submit',closeQq);
+  qqDialog.addEventListener('cancel',closeQq);
+  qqDialog.addEventListener('close',()=>{
+    if (!qqDialog.open) resetQqAnimation();
+  });
+  qqDialog.addEventListener('click',event=>{
+    if (event.target===qqDialog) closeQq(event);
+  });
+
   root.addEventListener('crt-view',event=>{
+    if (event.detail!=='about' && qqDialog.open) {
+      resetQqAnimation();
+      qqDialog.close();
+    }
     if (event.detail==='home') return;
-    const changed = current !== (event.detail==='about' ? 'about' : 'project');
+    const [,category] = event.detail.split('/');
+    const previous = current, previousCategory = selected, previousFile = fileOpen;
     current = event.detail==='about' ? 'about' : 'project';
+    if (category) selected = [...list.children].findIndex(button=>button.dataset.category===category);
+    fileOpen = '#'+event.detail===fileTile.hash;
+    if (previousFile!==fileOpen) window.scrollTo(0,0);
     updateContent();
+    const changed = previous!==current || previousCategory!==selected || previousFile!==fileOpen;
     if (changed && root.crtEntryTime?.(performance.now()) < 0) refreshPanel();
   });
+  document.addEventListener('zoea-language-change',updateContent);
   root.querySelectorAll('[data-page]').forEach(button=>{
     button.addEventListener('click',()=>{location.hash=button.dataset.page==='about' ? 'about' : 'projects';});
   });
-  [...list.children].forEach((button,index)=>{
+  [...list.children].forEach(button=>{
     button.addEventListener('click',()=>{
-      if (selected===index && current==='project') return;
-      selected = index;
-      if (current==='about') {
-        location.hash='projects';
-        return;
-      }
-      updateContent();
-      refreshPanel();
+      location.hash='projects/'+button.dataset.category;
     });
   });
   function updateLabelHighlight(event) {
-    if (!root.crtLive || !event.target.closest('.list button, header a, header button')) return;
+    if (!root.crtLive || !event.target.closest('.list button, header a, header button, .about-contact, .file-tile, .file-action')) return;
     refreshLabels?.();
     root.crtLive.invalidate();
   }
-  for (const event of ['focusin','focusout','pointerover','pointerout']) {
+  for (const event of ['focusin','focusout','pointerover','pointerout','crt-sound-change']) {
     root.addEventListener(event,updateLabelHighlight);
   }
+  qqIcon.addEventListener('load',updateLabelHighlight);
+  paintFileIcons();
   new ResizeObserver(()=>render()).observe(display);
 
 })();

@@ -1,4 +1,4 @@
-window.createCrt = function createCrt(root) {
+window.createCrt = function createCrt(root,{closeup=false}={}) {
   const source = root.querySelector('.crt-signal');
   const canvas = document.createElement('canvas');
   const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false, antialias: false, depth: false });
@@ -11,7 +11,7 @@ window.createCrt = function createCrt(root) {
     'uniform vec2 size, viewport, pointer;',
     'uniform vec4 panel, entryCaret;',
     'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime;',
-    'uniform bool home;',
+    'uniform bool home, closeup;',
     'uniform sampler2D signalTex;',
     'float bell(float x){return exp(-x*x);}',
     'float lineMark(float distance, float width){',
@@ -96,7 +96,8 @@ window.createCrt = function createCrt(root) {
     '  n=projected;',
     '  float radius=dot(n,n);',
     '  vec2 glassUV=.5+.48*n*(1.+vec2(.044,.061)*n.yx*n.yx+vec2(.022,.018)*n*n);',
-    '  if(!home) glassUV=archivePerspective(glassUV);',
+    '  if(closeup) glassUV=mix(uv,glassUV,.38);',
+    '  if(!home && !closeup) glassUV=archivePerspective(glassUV);',
     '  vec2 q=glassUV;',
     '  float depth=smoothstep(.56,1.,q.y);',
     '  if(home) q.x-=pointer.x*.003*depth;',
@@ -113,11 +114,13 @@ window.createCrt = function createCrt(root) {
     '  float tail=exp(-max(0.,sweep)/.051)*smoothstep(-.005,.014,sweep);',
     '  float pulseArea=home ? 1.-.94*smoothstep(.46,.56,q.y) : 1.;',
     '  float scan=(leading*(.75+1.30*packet)+tail*.56)*pulseArea;',
+    '  if(closeup) scan*=.52;',
     '  vec2 cursor=(uv-.5-pointer*.5)*vec2(5.0,6.2);',
-    '  float response=home ? 0. : pointerPresence*exp(-dot(cursor,cursor));',
+    '  float response=home || closeup ? 0. : pointerPresence*exp(-dot(cursor,cursor));',
     '  float beam=.36+.64*bell(phase/(.20+.20*sqrt(emission)+.15*leading*packet*pulseArea));',
     '  float logoGlow=home ? bell((q.y-.32)/.18) : 0.;',
     '  float spread=diffuse*(.46+.52*logoGlow)+halo*(.34+.34*logoGlow);',
+    '  if(closeup) spread*=.58;',
     '  float vignette=max(.56,1.-.075*radius-.061*radius*radius);',
     '  float value=(emission*beam*(1.+scan*.62+response*.85)',
     '    +spread*(1.+scan*1.40+response*1.85))*vignette;',
@@ -171,6 +174,7 @@ window.createCrt = function createCrt(root) {
     '    value+=entryAfterglow(screenN);',
     '  }',
     '  float terrain=home ? smoothstep(.62,.79,q.y)*.94*power*rasterMask : 0.;',
+    '  if(closeup) value=max(value*.88,sharp*.70);',
     '  color=phosphor(value,terrain);',
     '}'
   ].join('\n');
@@ -195,7 +199,7 @@ window.createCrt = function createCrt(root) {
   gl.useProgram(program);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   const uniforms = Object.fromEntries(
-    ['size','viewport','pointer','pointerPresence','panel','panelRefresh','elapsed','power','home','signalTex','entryTime','entryCaret']
+    ['size','viewport','pointer','pointerPresence','panel','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret']
       .map(name => [name, gl.getUniformLocation(program, name)])
   );
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -206,6 +210,7 @@ window.createCrt = function createCrt(root) {
   gl.uniform1i(uniforms.signalTex, 0);
   const home = root.id === 'zoea-monitor';
   gl.uniform1i(uniforms.home, home ? 1 : 0);
+  gl.uniform1i(uniforms.closeup, closeup ? 1 : 0);
 
   canvas.className = 'crt-live';
   canvas.setAttribute('aria-hidden', 'true');

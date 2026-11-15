@@ -8,9 +8,11 @@
   <link rel="stylesheet" href="./assets/site.css">
   <link rel="stylesheet" href="./assets/home.css">
   <link rel="stylesheet" href="./assets/archive.css">
+  <script defer src="./assets/language.js"></script>
   <script defer src="./assets/motion.js"></script>
   <script defer src="./assets/shell.js"></script>
   <script defer src="./assets/terrain.js"></script>
+  <script defer src="./assets/sound.js"></script>
   <script defer src="./assets/home.js"></script>
   <script defer src="./assets/archive.js"></script>
 </head>
@@ -18,41 +20,99 @@
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
 <canvas id="crt-streams" aria-hidden="true"></canvas>
 <div id="crt-screen">
-<section id="zoea-monitor" aria-label="ZOEA 首页" data-crt>
+<section id="zoea-monitor" aria-label="ZOEA 首页" data-i18n-label="home" data-crt>
   <div class="screen">
     <div class="fallback" aria-hidden="true">ZOEA</div>
-    <canvas class="crt-signal" role="img" aria-label="琥珀色字符拼成的 ZOEA 字标和起伏地形，带有轻微的 CRT 曲面效果"></canvas>
-    <nav class="portals" aria-label="平台入口">
-      <button type="button" data-platform="Bilibili" aria-label="Bilibili"><img alt="" src="./assets/bilibili.svg" width="20" height="20"></button>
-      <a href="https://www.xiaohongshu.com/user/profile/607e875f000000000100697a" target="_blank" rel="noopener noreferrer" data-platform="小红书" aria-label="小红书"><img alt="" src="./assets/xiaohongshu.svg" width="23" height="23"></a>
+    <canvas class="crt-signal" role="img" aria-label="琥珀色字符拼成的 ZOEA 字标和起伏地形，带有轻微的 CRT 曲面效果" data-i18n-label="homeSignal"></canvas>
+    <button class="crt-mute" type="button" aria-label="静音" aria-pressed="false" hidden><span class="crt-mute-icon" aria-hidden="true"></span></button>
+    <button class="crt-language" type="button" aria-label="切换到英文" hidden><span class="crt-language-label" lang="en" aria-hidden="true">EN</span></button>
+    <nav class="portals" aria-label="平台入口" data-i18n-label="platforms">
+      <a href="https://www.douyin.com/user/MS4wLjABAAAAzAN7EzLSGHW4nI1bZefMjyER6I3AtaJ4dRKfyRSoCYc?from_tab_name=main" target="_blank" rel="noopener noreferrer" data-platform="抖音" aria-label="抖音" data-i18n-label="douyin"><img alt="" src="./assets/douyin.svg" width="20" height="20"></a>
+      <a href="https://www.xiaohongshu.com/user/profile/607e875f000000000100697a" target="_blank" rel="noopener noreferrer" data-platform="小红书" aria-label="小红书" data-i18n-label="xiaohongshu"><img alt="" src="./assets/xiaohongshu.svg" width="23" height="23"></a>
       <button type="button" data-platform="GitHub" aria-label="GitHub"><img alt="" src="./assets/github.svg" width="19" height="19"></button>
     </nav>
-    <a class="terminal" href="#projects" aria-label="进入作品目录"><span class="terminal-label">enter</span><span class="terminal-caret" aria-hidden="true"></span></a>
+    <a class="terminal" href="#projects" aria-label="进入作品目录" data-i18n-label="enter"><span class="terminal-label">enter</span><span class="terminal-caret" aria-hidden="true"></span></a>
   </div>
 </section>
-<section id="zoea-archive" aria-label="ZOEA 作品目录" data-crt hidden>
+<section id="zoea-archive" aria-label="ZOEA 作品目录" data-i18n-label="archive" data-crt hidden>
   <header>
-    <a class="wordmark" href="#home" aria-label="返回 ZOEA 首页">ZOEA_</a>
-    <nav aria-label="目录">
-      <button type="button" data-page="project" aria-current="page">项目</button>
-      <button type="button" data-page="about">关于</button>
+    <button class="crt-mute" type="button" aria-label="静音" aria-pressed="false" hidden><span class="crt-mute-icon" aria-hidden="true"></span></button>
+    <a class="wordmark" href="#home" aria-label="返回 ZOEA 首页" data-i18n-label="backHome">ZOEA_</a>
+    <nav aria-label="目录" data-i18n-label="navigation">
+      <button type="button" data-page="project" aria-current="page" data-i18n="projects">项目</button>
+      <button type="button" data-page="about" data-i18n="about">关于</button>
     </nav>
   </header>
   <main>
     <div class="display">
-      <canvas class="crt-signal" id="zoea-gallery" role="img" aria-label="琥珀色 CRT 内容"></canvas>
+      <canvas class="crt-signal" id="zoea-gallery" role="img" aria-label="琥珀色 CRT 内容" data-i18n-label="archiveSignal"></canvas>
     </div>
     <div class="crt-panel">
       <div class="intro">
         <p class="prompt" id="zoea-directory">C:\ZOEA\PROJECTS&gt;</p>
-        <h1 id="zoea-heading">作品</h1>
-        <p id="zoea-detail" aria-live="polite"></p>
+        <h1 id="zoea-heading" tabindex="-1">作品</h1>
+        <div class="file-grid" hidden>
+          <a class="file-tile" href="#projects/plugins/film-scan-helper">
+            <canvas class="file-icon" width="68" height="68" aria-hidden="true"></canvas>
+            <span class="file-name" data-file-text data-i18n="filmScanHelper">胶片翻拍助手</span>
+          </a>
+        </div>
+        <article class="file-properties" aria-labelledby="zoea-heading" hidden>
+          <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
+          <div class="file-body">
+            <div class="file-summary">
+              <canvas class="file-icon" width="68" height="68" aria-hidden="true"></canvas>
+              <dl>
+                <dt data-file-text data-i18n="fileName">文件名</dt><dd data-file-text lang="zh-CN">胶片翻拍助手_v2.6.zip</dd>
+                <dt data-file-text data-i18n="fileVersion">版本</dt><dd data-file-text data-i18n="filmScanVersion">v2.6 测试版</dd>
+                <dt data-file-text data-i18n="fileRequires">适用环境</dt><dd data-file-text>Windows · Photoshop 2023 (24.2)+</dd>
+              </dl>
+            </div>
+            <div class="file-description">
+              <h3 data-file-text data-i18n="fileDescription">介绍</h3>
+              <p data-file-text data-i18n="filmScanIntro">这是我给用数码相机和片夹翻拍 135 黑白负片做的 Photoshop 插件。选中一卷照片的文件夹，它就能批量调平、裁掉片夹边缘、把负片转正，并设定黑白场。</p>
+              <p data-file-text data-i18n="filmScanOutput">支持 RAW 和 JPEG，可导出成品 JPEG，也可以保留可继续编辑的分层 PSD。想保留胶片的样子，还可以加胶片边框、生成整卷预览。个别照片识别不准，也能单张修正。</p>
+              <p data-file-text data-i18n="filmScanFeedback">目前还在测试，有些地方可能不够完善。遇到 Bug 或有改进建议，欢迎从首页的平台私信告诉我。</p>
+            </div>
+          </div>
+          <footer class="file-actions">
+            <a class="file-action" href="#projects/plugins" data-file-text data-i18n="backToPlugins">返回插件</a>
+            <div class="file-download-group">
+              <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/raw/refs/heads/main/downloads/film-scan-helper-v2.6.zip" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
+              <a class="file-action file-download" href="https://pan.baidu.com/s/1GXz8FWuBG3h045L-k3Ta7A?pwd=cubx" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="baiduDownload">百度网盘下载 ↗</a>
+            </div>
+          </footer>
+        </article>
+        <div class="about-content" role="region" aria-label="关于 ZOEA 的正文" data-i18n-label="aboutContent" hidden>
+          <div class="about-copy">
+            <p data-i18n="bio">嗨，我是 ZOEA。平时主要做 3D 模型和 Unreal Engine（UE）地编。工作之外，我喜欢摄影，也会写插件、做游戏 Mod，有空还会自己开发游戏。</p>
+            <section>
+              <h2 data-i18n="commissions">模型与场景定制</h2>
+              <p data-i18n="commissionsCopy">如果你有个想做出来的模型或场景，欢迎从首页的平台私信我，我们可以先聊聊你的想法。</p>
+            </section>
+            <section>
+              <h2 data-i18n="courses">UE 与模型课程</h2>
+              <p data-i18n="coursesCopy">我也教 UE 和模型制作，课程用中文讲。想了解课程内容，欢迎加 QQ 找我聊聊。</p>
+            </section>
+          </div>
+          <div class="about-contacts" role="group" aria-label="联系方式" data-i18n-label="contact">
+            <button class="about-contact" type="button" aria-haspopup="dialog" aria-controls="zoea-qq" aria-label="查看 QQ 联系二维码" data-i18n-label="showQq"><img src="./assets/qq-icon.svg" alt="" width="29" height="34"></button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="index">
-      <div class="list" aria-label="项目分类" id="zoea-list"><button type="button" data-category="works" aria-pressed="true">作品</button><button type="button" data-category="plugins" aria-pressed="false">插件</button><button type="button" data-category="mod" aria-pressed="false">MOD</button></div>
+      <div class="list" aria-label="项目分类" data-i18n-label="categories" id="zoea-list"><button type="button" data-category="works" aria-pressed="true" data-i18n="works">作品</button><button type="button" data-category="plugins" aria-pressed="false" data-i18n="plugins">插件</button><button type="button" data-category="mod" aria-pressed="false">MOD</button></div>
     </div>
   </main>
+  <dialog id="zoea-qq" class="qq-dialog" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
+    <div class="qq-glass">
+      <form method="dialog"><button type="submit" aria-label="关闭二维码" data-i18n-label="closeQq" autofocus><span aria-hidden="true"></span></button></form>
+      <div class="qq-code" role="img" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
+        <img class="crt-signal" src="./assets/qq-code.svg" alt="" width="340" height="340">
+      </div>
+    </div>
+  </dialog>
 </section>
 </div>
 </body>

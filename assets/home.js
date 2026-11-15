@@ -22,8 +22,9 @@
   const terminalCaret = terminal.querySelector('.terminal-caret');
   let terminalLayout;
   let terminalX = 0, terminalY = 0;
-  const portalIcons = [...root.querySelectorAll('.portals [data-platform]')].map(control=>({
-    control, image:control.querySelector('img'), mask:null, dx:0, dy:0
+  const portalIcons = [...root.querySelectorAll('.portals [data-platform],.crt-mute,.crt-language')].map(control=>({
+    control, image:control.querySelector('img'), mark:control.firstElementChild,
+    mask:null, dx:0, dy:0
   }));
   let portalLayout;
   const terrainSprites = new Map();
@@ -167,6 +168,34 @@
     return [px,py];
   }
 
+  function measureTextCells(text,width,height,font,align) {
+    const mask = makeLayer(Math.ceil(width*2),Math.ceil(height*2),true);
+    mask.scale(2,2);
+    mask.font = font;
+    mask.textAlign = align;
+    mask.textBaseline = 'middle';
+    mask.fillText(text,align==='center' ? width/2 : 0,height/2);
+    const {width:mw,height:mh} = mask.canvas;
+    const pixels = mask.getImageData(0,0,mw,mh).data;
+    const cells = [];
+    for (let row=1;row<mh;row+=3) {
+      for (let col=1;col<mw;col+=3) {
+        const opacity = pixels[(row*mw+col)*4+3];
+        if (opacity>90) cells.push([col/2,row/2,opacity/255]);
+      }
+    }
+    return cells;
+  }
+
+  function drawTextCells(target,cells,x,y,highlighted) {
+    target.fillStyle = '#fff';
+    for (const [dx,dy,alpha] of cells) {
+      target.globalAlpha = alpha*(highlighted ? .96 : .76);
+      target.fillRect(x+dx,y+dy,1.17,1.14);
+    }
+    target.globalAlpha = 1;
+  }
+
   function drawTerminal(target,w,h,time,still,transform) {
     if (terminalLayout?.w!==w || terminalLayout.h!==h) {
       const origin = screen.getBoundingClientRect();
@@ -176,31 +205,15 @@
       const top = label.top-origin.top-terminalY;
       const [x,y] = glassSample(left,top,w,h);
       const style = getComputedStyle(terminalLabel);
-      const mask = makeLayer(Math.ceil(label.width*2),Math.ceil(label.height*2),true);
-      mask.scale(2,2);
-      mask.font = '700 '+style.fontSize+' '+style.fontFamily;
-      mask.textBaseline = 'middle';
-      mask.fillText('enter',0,label.height/2);
-      const width = mask.canvas.width;
-      const pixels = mask.getImageData(0,0,width,mask.canvas.height).data;
-      const cells = [];
-      for (let row=1;row<mask.canvas.height;row+=3) {
-        for (let col=1;col<width;col+=3) {
-          const opacity = pixels[(row*width+col)*4+3];
-          if (opacity>90) cells.push([col/2,row/2,opacity/255]);
-        }
-      }
+      const cells = measureTextCells(terminalLabel.textContent,label.width,label.height,
+        '700 '+style.fontSize+' '+style.fontFamily,'left');
       const [cx,cy] = glassSample(caret.left-origin.left-terminalX,caret.top-origin.top-terminalY,w,h);
       terminalLayout = {w,h,left,top,x,y,cells,cx,cy,cw:caret.width,ch:caret.height};
       root.crtLive.setEntryCaret([(cx+caret.width/2)/w,(cy+caret.height/2)/h,caret.width/2,caret.height/2]);
     }
     const layout = terminalLayout;
     const highlighted = terminal.matches(':hover,:focus-visible');
-    target.fillStyle = '#fff';
-    for (const [x,y,alpha] of layout.cells) {
-      target.globalAlpha = alpha*(highlighted ? .96 : .76);
-      target.fillRect(layout.x+x,layout.y+y,1.17,1.14);
-    }
+    drawTextCells(target,layout.cells,layout.x,layout.y,highlighted);
     if (still || time%1.35<.675) {
       target.globalAlpha = highlighted ? 1 : .91;
       target.fillRect(layout.cx,layout.cy,layout.cw,layout.ch);
@@ -219,10 +232,10 @@
 
   function drawPortals(target,w,h,transform) {
     if (portalLayout?.w!==w || portalLayout.h!==h) {
-      if (portalIcons.some(({image})=>!image.complete || !image.naturalWidth)) return;
+      if (portalIcons.some(({image})=>image && (!image.complete || !image.naturalWidth))) return;
       const origin = screen.getBoundingClientRect();
       const icons = portalIcons.map(portal=>{
-        const box = portal.image.getBoundingClientRect();
+        const box = portal.mark.getBoundingClientRect();
         const x = box.left-origin.left+box.width/2-portal.dx;
         const y = box.top-origin.top+box.height/2-portal.dy;
         const [sx,sy] = glassSample(x,y,w,h);
@@ -231,8 +244,8 @@
       portalLayout = {w,h,icons};
     }
     for (const {portal,x,y,sx,sy,width,height} of portalLayout.icons) {
-      const {control,image} = portal;
-      if (!portal.mask) {
+      const {control,image,mark} = portal;
+      if (image && !portal.mask) {
         const mask = makeLayer(72,72);
         mask.drawImage(image,0,0,72,72);
         mask.globalCompositeOperation = 'source-in';
@@ -240,9 +253,22 @@
         mask.fillRect(0,0,72,72);
         portal.mask = mask.canvas;
       }
-      const bright = control.matches(':hover, :focus-visible');
-      target.globalAlpha = bright ? .98 : .72;
-      target.drawImage(portal.mask,sx-width/2,sy-height/2,width,height);
+      if (image) {
+        const bright = control.matches(':hover, :focus-visible');
+        target.globalAlpha = bright ? .98 : .72;
+        target.drawImage(portal.mask,sx-width/2,sy-height/2,width,height);
+        target.globalAlpha = 1;
+      } else if (control.matches('.crt-mute')) {
+        window.drawCrtSoundIcon(target,control,sx,sy,width);
+      } else {
+        const text = mark.textContent;
+        if (portal.text!==text) {
+          const {fontWeight,fontSize,fontFamily} = getComputedStyle(mark);
+          portal.cells = measureTextCells(text,width,height,fontWeight+' '+fontSize+' '+fontFamily,'center');
+          portal.text = text;
+        }
+        drawTextCells(target,portal.cells,sx-width/2,sy-height/2,control.matches(':hover,:focus-visible'));
+      }
 
       // Align each native hit area with the rendered icon after projection.
       const [px,py] = screenPoint(sx,sy,w,h,transform,x,y);
@@ -633,12 +659,13 @@
   render();
 
   for (const {control,image} of portalIcons) {
-    image.addEventListener('load',()=>root.crtLive?.invalidate());
-    for (const event of ['focus','blur','pointerenter','pointerleave']) {
+    image?.addEventListener('load',()=>root.crtLive?.invalidate());
+    for (const event of ['focus','blur','pointerenter','pointerleave','crt-sound-change']) {
       control.addEventListener(event,()=>root.crtLive?.invalidate());
     }
   }
   for (const event of ['focus','blur','pointerenter','pointerleave']) {
     terminal.addEventListener(event,()=>root.crtLive?.invalidate());
   }
+  document.addEventListener('zoea-language-change',()=>root.crtLive?.invalidate());
 })();

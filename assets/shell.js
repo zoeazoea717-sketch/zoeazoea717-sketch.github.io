@@ -4,6 +4,9 @@
   const glass = document.getElementById('crt-screen');
   const home = document.getElementById('zoea-monitor');
   const archive = document.getElementById('zoea-archive');
+  const pluginTile = archive.querySelector('.file-tile');
+  const pluginRoute = pluginTile.hash.slice(1);
+  const projectRoutes = new Set(['projects','projects/works','projects/plugins',pluginRoute,'projects/mod']);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const ctx = background.getContext('2d');
   const flowCtx = streamLayer.getContext('2d');
@@ -221,17 +224,29 @@
     cycle();
   }
 
+  function updateTitle() {
+    const {text} = window.zoeaLocale;
+    document.title = current==='home' ? 'ZOEA' :
+      current==='about' ? text('about','关于')+' · ZOEA' :
+      current===pluginRoute ? pluginTile.textContent.trim()+' · ZOEA' : text('portfolioTitle','作品目录 · ZOEA');
+  }
+
   function switchView(view) {
     if (view===requestedView) return;
     requestedView = view;
     const previous = current;
-    const moveFocus = document.activeElement?.matches(':focus-visible');
+    const active = document.activeElement;
+    const moveFocus = active?.matches(':focus-visible');
     cancelTransition();
     if (view===previous) return;
     function focus() {
       if (!previous || !moveFocus) return;
-      (view==='home' ? home.querySelector('.terminal') : archive.querySelector('[aria-current="page"]'))
-        ?.focus({preventScroll:true});
+      if (view!=='home' && view!=='about' && active.matches('[data-category]')) return;
+      const target = view==='home' ? home.querySelector('.terminal') :
+        view===pluginRoute ? archive.querySelector('#zoea-heading') :
+        previous===pluginRoute && view==='projects/plugins' ? pluginTile :
+        archive.querySelector('[aria-current="page"]');
+      target?.focus({preventScroll:true});
     }
     const change = ()=>{
       current = view;
@@ -239,7 +254,7 @@
       archive.hidden = view==='home';
       home.dispatchEvent(new Event('crt-view'));
       archive.dispatchEvent(new CustomEvent('crt-view',{detail:view}));
-      document.title = view==='home' ? 'ZOEA' : view==='about' ? '关于 · ZOEA' : '作品目录 · ZOEA';
+      updateTitle();
     };
     if (previous==='home' && view!=='home' && !reduced.matches && home.crtLive && archive.crtLive) {
       enterArchive(change,focus);
@@ -254,10 +269,15 @@
   }
 
   function syncView() {
-    const path = location.hash.slice(1);
-    switchView(['projects','about'].includes(path) ? path : 'home');
+    let path = location.hash.slice(1);
+    if (path==='projects/plugins/demo') {
+      path = pluginRoute;
+      history.replaceState(history.state,'','#'+path);
+    }
+    switchView(projectRoutes.has(path) || path==='about' ? path : 'home');
   }
   window.addEventListener('hashchange',syncView);
+  document.addEventListener('zoea-language-change',updateTitle);
   // The archive registers its view listener in the same deferred script batch.
   document.addEventListener('DOMContentLoaded',syncView,{once:true});
 })();
