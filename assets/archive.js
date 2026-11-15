@@ -319,6 +319,131 @@
     titleCtx.stroke();
   }
 
+  function paintFilmArtwork() {
+    const film = titleCtx;
+    const base = film.createLinearGradient(4,14,64,54);
+    base.addColorStop(0,'rgba(255,255,255,.64)');
+    base.addColorStop(1,'rgba(255,255,255,.22)');
+    film.fillStyle = base;
+    film.fillRect(4,14,60,40);
+    film.lineWidth = 1;
+    film.strokeStyle = 'rgba(255,255,255,.88)';
+    film.strokeRect(4,14,60,40);
+    for (let x=7;x<62;x+=6) {
+      film.clearRect(x,17,3.3,3);
+      film.clearRect(x,48,3.3,3);
+    }
+    for (const [x,reversed] of [[8,false],[36,true]]) {
+      film.clearRect(x,23,24,21);
+      film.save();
+      film.beginPath();
+      film.rect(x,23,24,21);
+      film.clip();
+      const exposure = film.createLinearGradient(x,23,x,44);
+      exposure.addColorStop(0,reversed ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.56)');
+      exposure.addColorStop(1,reversed ? 'rgba(255,255,255,.36)' : 'rgba(255,255,255,.21)');
+      film.fillStyle = exposure;
+      film.fillRect(x,23,24,21);
+      film.fillStyle = reversed ? 'rgba(255,255,255,.72)' : 'rgba(255,255,255,.80)';
+      film.beginPath();
+      film.moveTo(x,39);
+      film.lineTo(x+7,29);
+      film.lineTo(x+13,37);
+      film.lineTo(x+18,32);
+      film.lineTo(x+24,39);
+      film.lineTo(x+24,44);
+      film.lineTo(x,44);
+      film.closePath();
+      if (!reversed) film.globalCompositeOperation = 'destination-out';
+      film.fill();
+      film.beginPath();
+      film.arc(x+18,27.5,2.2,0,Math.PI*2);
+      film.globalCompositeOperation = reversed ? 'destination-out' : 'source-over';
+      film.fillStyle = reversed ? '#fff' : 'rgba(255,255,255,.72)';
+      film.fill();
+      film.restore();
+      film.strokeStyle = 'rgba(255,255,255,.72)';
+      film.strokeRect(x,23,24,21);
+    }
+  }
+
+  function paintGwentArtwork() {
+    const card = titleCtx;
+    for (const [x,y,angle,front] of [[18.5,35,-.30,false],[49.5,35,.30,false],[34,32,0,true]]) {
+      card.save();
+      card.translate(x,y);
+      card.rotate(angle);
+      card.clearRect(-12,-19,24,38);
+      const paper = card.createLinearGradient(-12,-18,12,19);
+      paper.addColorStop(0,front ? 'rgba(255,255,255,.46)' : 'rgba(255,255,255,.27)');
+      paper.addColorStop(1,'rgba(255,255,255,.13)');
+      card.fillStyle = paper;
+      card.fillRect(-12,-19,24,38);
+      card.lineWidth = 1.35;
+      card.strokeStyle = front ? '#fff' : 'rgba(255,255,255,.70)';
+      card.strokeRect(-12,-19,24,38);
+      card.lineWidth = .85;
+      card.strokeRect(-8,-10,16,22);
+      card.fillStyle = 'rgba(255,255,255,.64)';
+      card.fillRect(-8,-15,4.5,1.6);
+      card.fillRect(3.5,14,4.5,1.6);
+      if (front) {
+        card.fillStyle = 'rgba(255,255,255,.29)';
+        card.beginPath();
+        card.moveTo(0,-8);
+        card.lineTo(5.8,-5);
+        card.lineTo(5,3.5);
+        card.lineTo(0,9);
+        card.lineTo(-5,3.5);
+        card.lineTo(-5.8,-5);
+        card.closePath();
+        card.fill();
+        card.lineWidth = 1.65;
+        card.beginPath();
+        card.moveTo(-3.8,5.5);
+        card.lineTo(4,-4.8);
+        card.moveTo(-3.9,1.4);
+        card.lineTo(.1,4.7);
+        card.stroke();
+      } else {
+        const side = Math.sign(angle)*4;
+        card.strokeStyle = 'rgba(255,255,255,.58)';
+        card.beginPath();
+        card.moveTo(side,-5);
+        card.lineTo(side+3,-.5);
+        card.lineTo(side,4);
+        card.lineTo(side-3,-.5);
+        card.closePath();
+        card.stroke();
+      }
+      card.restore();
+    }
+  }
+
+  function drawArtworkCharacters(target,pixels,size,width) {
+    const characters = ['','.',':','=','+','x+','2x','25','57','7#'];
+    const pitch = size/Math.max(32,Math.round(width/6.3));
+    const rowPitch = pitch*1.16;
+    target.textAlign = 'center';
+    target.textBaseline = 'middle';
+    target.font = '700 '+pitch*1.38+'px Consolas, monospace';
+    for (let y=rowPitch*.5;y<size;y+=rowPitch) {
+      for (let x=pitch*.5;x<size;x+=pitch) {
+        const center = (Math.floor(y)*size+Math.floor(x))*4+3;
+        const offset = Math.max(1,Math.floor(pitch*.25));
+        const light = (pixels[center]*2+pixels[center-offset*4]+pixels[center+offset*4])/1020;
+        if (light<.07) continue;
+        const variation = grain(x/pitch,y/rowPitch);
+        const index = Math.round(limit(light+(variation-.5)*.16)*(characters.length-1));
+        if (!index) continue;
+        const choices = characters[index];
+        target.globalAlpha = Math.min(1,.20+light*1.08);
+        target.fillText(choices[Math.floor(variation*choices.length)],x,y);
+      }
+    }
+    target.globalAlpha = 1;
+  }
+
   function paintFileIcon(icon,width,density) {
     const size = Math.max(1,Math.ceil(width*density));
     if (icon.width===size && paintedIcons.has(icon)) return;
@@ -329,10 +454,21 @@
     titleCtx.strokeStyle = '#fff';
     titleCtx.fillStyle = '#fff';
     titleCtx.lineWidth = 2;
-    if (icon.dataset.icon==='gwent') paintGwentIcon();
+    const gwent = icon.dataset.icon==='gwent';
+    const artwork = icon.classList.contains('file-art');
+    if (artwork) {
+      if (gwent) paintGwentArtwork();
+      else paintFilmArtwork();
+    } else if (gwent) paintGwentIcon();
     else paintFilmIcon();
     const {data} = titleCtx.getImageData(0,0,size,size);
-    drawPhosphorDots(icon.getContext('2d'),data,size,size,2*density,0,0);
+    const target = icon.getContext('2d');
+    if (artwork) {
+      target.fillStyle = '#fff';
+      drawArtworkCharacters(target,data,size,width);
+    } else {
+      drawPhosphorDots(target,data,size,size,2*density,0,0);
+    }
     paintedIcons.add(icon);
   }
 
