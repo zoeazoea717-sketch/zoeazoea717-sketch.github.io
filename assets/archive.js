@@ -9,9 +9,10 @@
   const heading = find('#zoea-heading');
   const panel = find('.crt-panel');
   const aboutContent = find('.about-content');
-  const fileGrid = find('.file-grid');
-  const fileProperties = find('.file-properties');
-  const fileTile = find('.file-tile');
+  const fileGrids = [...root.querySelectorAll('.file-grid')];
+  const fileTiles = [...root.querySelectorAll('.file-tile')];
+  const fileDetails = new Map([...root.querySelectorAll('.file-properties')]
+    .map(detail=>[detail.dataset.fileId ?? 'film-scan-helper',detail]));
   const fileIcons = [...root.querySelectorAll('.file-icon')];
   const qqDialog = find('#zoea-qq');
   const qqButton = find('[aria-controls="zoea-qq"]');
@@ -24,7 +25,7 @@
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   let current = 'project';
   let selected = 0;
-  let fileOpen = false;
+  let openFile = null;
   const limit = n => Math.max(0,Math.min(1,n));
   const soft = n => Math.exp(-n*n);
   function grain(x,y) {
@@ -173,12 +174,14 @@
     }
     return {layout,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
-      files:fileIcons.filter(icon=>icon.getClientRects().length).map(icon=>({icon,...measureIcon(icon)})),
-      tile:fileGrid.hidden ? null : measureBox(fileTile),
-      properties:fileProperties.hidden ? null : {
-        box:measureBox(fileProperties),bar:measureBox(find('.file-bar')),footer:measureBox(find('.file-actions'))
-      },
-      actions:fileProperties.hidden ? [] : [...root.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)}))
+      files:fileIcons.filter(icon=>icon.getClientRects().length)
+        .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
+      tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
+      properties:openFile ? {
+        box:measureBox(openFile),bar:measureBox(openFile.querySelector('.file-bar')),
+        footer:measureBox(openFile.querySelector('.file-actions'))
+      } : null,
+      actions:openFile ? [...openFile.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : []
     };
   }
 
@@ -188,7 +191,7 @@
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,soundIcon,contactIcon,tile,properties,files,actions} = labelLayout ?? measureLabels();
+    const {layout,soundIcon,contactIcon,tiles,properties,files,actions} = labelLayout ?? measureLabels();
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
       labelsCtx.strokeStyle = '#fff';
@@ -196,7 +199,9 @@
         labelsCtx.globalAlpha = alpha;
         labelsCtx.strokeRect(left,top,width,height);
       }
-      if (tile && highlighted(fileTile)) outline(tile,.36);
+      for (const {tile,...box} of tiles) {
+        if (highlighted(tile)) outline(box,.36);
+      }
       if (properties) {
         const {box,bar,footer} = properties;
         outline(box,.42);
@@ -211,8 +216,8 @@
           outline(box,highlighted(action) ? .75 : action.matches('.file-download') ? .46 : .30);
         }
       }
-      for (const {icon,x,y,width,height} of files) {
-        labelsCtx.globalAlpha = tile && highlighted(fileTile) ? 1 : .80;
+      for (const {icon,tile,x,y,width,height} of files) {
+        labelsCtx.globalAlpha = tile && highlighted(tile) ? 1 : .80;
         labelsCtx.drawImage(icon,x-width/2,y-height/2,width,height);
       }
     }
@@ -226,7 +231,7 @@
       const descriptionHeading = label.matches('h2,h3');
       labelsCtx.globalAlpha = fileText ? .91 : active ? .69 : descriptionHeading ? .74 : .56;
       const highlighted = label === document.activeElement || label.matches(':hover') ||
-        label.matches('.file-name') && fileTile.matches(':hover,:focus-visible');
+        label.closest('.file-tile')?.matches(':hover,:focus-visible');
       if (highlighted) {
         labelsCtx.globalAlpha = fileText ? 1 : .88;
         labelsCtx.shadowColor = '#fff';
@@ -271,12 +276,7 @@
     }
   }
 
-  function paintFileIcons() {
-    const size = 68;
-    titleLayer.width = titleLayer.height = size;
-    titleCtx.strokeStyle = '#fff';
-    titleCtx.fillStyle = '#fff';
-    titleCtx.lineWidth = 2;
+  function paintFilmIcon() {
     titleCtx.strokeRect(5,12,58,44);
     titleCtx.strokeRect(10,24,22,20);
     titleCtx.strokeRect(36,24,22,20);
@@ -288,8 +288,42 @@
     titleCtx.fillRect(22,36,6,4);
     titleCtx.fillRect(40,36,8,4);
     titleCtx.fillRect(48,32,6,8);
-    const {data} = titleCtx.getImageData(0,0,size,size);
-    for (const icon of fileIcons) drawPhosphorDots(icon.getContext('2d'),data,size,size,2,0,0);
+  }
+
+  function paintGwentIcon() {
+    for (const [x,y,angle] of [[18,36,-.29],[50,36,.29],[34,32,0]]) {
+      titleCtx.save();
+      titleCtx.translate(x,y);
+      titleCtx.rotate(angle);
+      titleCtx.clearRect(-11,-18,22,36);
+      titleCtx.strokeRect(-11,-18,22,36);
+      titleCtx.strokeRect(-7,-9,14,17);
+      titleCtx.fillRect(-7,-14,4,2);
+      titleCtx.fillRect(2,12,5,2);
+      titleCtx.restore();
+    }
+    // Sword on the face of the foremost card.
+    titleCtx.beginPath();
+    titleCtx.moveTo(29,37);
+    titleCtx.lineTo(38,28);
+    titleCtx.moveTo(29,32);
+    titleCtx.lineTo(34,37);
+    titleCtx.stroke();
+  }
+
+  function paintFileIcons() {
+    const size = 68;
+    for (const [kind,paint] of [['film',paintFilmIcon],['gwent',paintGwentIcon]]) {
+      titleLayer.width = titleLayer.height = size;
+      titleCtx.strokeStyle = '#fff';
+      titleCtx.fillStyle = '#fff';
+      titleCtx.lineWidth = 2;
+      paint();
+      const {data} = titleCtx.getImageData(0,0,size,size);
+      for (const icon of fileIcons.filter(icon=>(icon.dataset.icon ?? 'film')===kind)) {
+        drawPhosphorDots(icon.getContext('2d'),data,size,size,2,0,0);
+      }
+    }
   }
 
   function drawHeading(width,height,scale) {
@@ -385,15 +419,17 @@
     const category = list.children[selected];
     const path = category.dataset.category.toUpperCase();
     const {text} = window.zoeaLocale;
-    const label = about ? text('aboutHeading','关于 ZOEA') : fileOpen ? text('fileDetails','文件详情') : category.textContent;
+    const label = about ? text('aboutHeading','关于 ZOEA') : openFile ? text('fileDetails','文件详情') : category.textContent;
     heading.textContent = label;
     find('#zoea-directory').textContent = about ? 'C:\\ZOEA\\ABOUT>' :
-      'C:\\ZOEA\\PROJECTS\\'+path+(fileOpen ? '\\FILM-SCAN-HELPER' : '')+'>';
+      'C:\\ZOEA\\PROJECTS\\'+path+(openFile ? '\\'+(openFile.dataset.fileId ?? 'film-scan-helper').toUpperCase() : '')+'>';
     root.dataset.view = current;
-    root.toggleAttribute('data-file-open',fileOpen);
+    root.toggleAttribute('data-file-open',Boolean(openFile));
     aboutContent.hidden = !about;
-    fileGrid.hidden = about || fileOpen || path!=='PLUGINS';
-    fileProperties.hidden = !fileOpen;
+    for (const grid of fileGrids) {
+      grid.hidden = about || Boolean(openFile) || (grid.dataset.fileCategory ?? 'plugins')!==category.dataset.category;
+    }
+    for (const detail of fileDetails.values()) detail.hidden = detail!==openFile;
     canvas.setAttribute('aria-label',label);
     [...list.children].forEach((button,i)=>button.setAttribute('aria-pressed',String(!about && i===selected)));
     root.querySelectorAll('[data-page]').forEach(button=>{
@@ -517,14 +553,14 @@
       qqDialog.close();
     }
     if (event.detail==='home') return;
-    const [,category] = event.detail.split('/');
-    const previous = current, previousCategory = selected, previousFile = fileOpen;
+    const [,category,fileId] = event.detail.split('/');
+    const previous = current, previousCategory = selected, previousFile = openFile;
     current = event.detail==='about' ? 'about' : 'project';
     if (category) selected = [...list.children].findIndex(button=>button.dataset.category===category);
-    fileOpen = '#'+event.detail===fileTile.hash;
-    if (previousFile!==fileOpen) window.scrollTo(0,0);
+    openFile = fileDetails.get(fileId) ?? null;
+    if (previousFile!==openFile) window.scrollTo(0,0);
     updateContent();
-    const changed = previous!==current || previousCategory!==selected || previousFile!==fileOpen;
+    const changed = previous!==current || previousCategory!==selected || previousFile!==openFile;
     if (changed && root.crtEntryTime?.(performance.now()) < 0) refreshPanel();
   });
   document.addEventListener('zoea-language-change',updateContent);

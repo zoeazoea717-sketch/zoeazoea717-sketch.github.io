@@ -4,9 +4,8 @@
   const glass = document.getElementById('crt-screen');
   const home = document.getElementById('zoea-monitor');
   const archive = document.getElementById('zoea-archive');
-  const pluginTile = archive.querySelector('.file-tile');
-  const pluginRoute = pluginTile.hash.slice(1);
-  const projectRoutes = new Set(['projects','projects/works','projects/plugins',pluginRoute,'projects/mod']);
+  const fileTiles = new Map([...archive.querySelectorAll('.file-tile')].map(tile=>[tile.hash.slice(1),tile]));
+  const projectRoutes = new Set(['projects','projects/works','projects/plugins','projects/mod',...fileTiles.keys()]);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const ctx = background.getContext('2d');
   const flowCtx = streamLayer.getContext('2d');
@@ -226,9 +225,10 @@
 
   function updateTitle() {
     const {text} = window.zoeaLocale;
+    const tile = fileTiles.get(current);
     document.title = current==='home' ? 'ZOEA' :
       current==='about' ? text('about','关于')+' · ZOEA' :
-      current===pluginRoute ? pluginTile.textContent.trim()+' · ZOEA' : text('portfolioTitle','作品目录 · ZOEA');
+      tile ? tile.textContent.trim()+' · ZOEA' : text('portfolioTitle','作品目录 · ZOEA');
   }
 
   function switchView(view) {
@@ -242,9 +242,10 @@
     function focus() {
       if (!previous || !moveFocus) return;
       if (view!=='home' && view!=='about' && active.matches('[data-category]')) return;
+      const previousTile = fileTiles.get(previous);
       const target = view==='home' ? home.querySelector('.terminal') :
-        view===pluginRoute ? archive.querySelector('#zoea-heading') :
-        previous===pluginRoute && view==='projects/plugins' ? pluginTile :
+        fileTiles.has(view) ? archive.querySelector('#zoea-heading') :
+        previousTile && previous.slice(0,previous.lastIndexOf('/'))===view ? previousTile :
         archive.querySelector('[aria-current="page"]');
       target?.focus({preventScroll:true});
     }
@@ -271,7 +272,7 @@
   function syncView() {
     let path = location.hash.slice(1);
     if (path==='projects/plugins/demo') {
-      path = pluginRoute;
+      path = 'projects/plugins/film-scan-helper';
       history.replaceState(history.state,'','#'+path);
     }
     switchView(projectRoutes.has(path) || path==='about' ? path : 'home');

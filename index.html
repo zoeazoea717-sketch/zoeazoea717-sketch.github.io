@@ -8,13 +8,13 @@
   <link rel="stylesheet" href="./assets/site.css">
   <link rel="stylesheet" href="./assets/home.css">
   <link rel="stylesheet" href="./assets/archive.css">
-  <script defer src="./assets/language.js"></script>
+  <script defer src="./assets/language.js?v=gwent-3.0"></script>
   <script defer src="./assets/motion.js"></script>
-  <script defer src="./assets/shell.js"></script>
+  <script defer src="./assets/shell.js?v=gwent-3.0"></script>
   <script defer src="./assets/terrain.js"></script>
   <script defer src="./assets/sound.js"></script>
   <script defer src="./assets/home.js"></script>
-  <script defer src="./assets/archive.js"></script>
+  <script defer src="./assets/archive.js?v=gwent-3.0"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -51,17 +51,23 @@
       <div class="intro">
         <p class="prompt" id="zoea-directory">C:\ZOEA\PROJECTS&gt;</p>
         <h1 id="zoea-heading" tabindex="-1">作品</h1>
-        <div class="file-grid" hidden>
+        <div class="file-grid" data-file-category="plugins" hidden>
           <a class="file-tile" href="#projects/plugins/film-scan-helper">
-            <canvas class="file-icon" width="68" height="68" aria-hidden="true"></canvas>
+            <canvas class="file-icon" data-icon="film" width="68" height="68" aria-hidden="true"></canvas>
             <span class="file-name" data-file-text data-i18n="filmScanHelper">胶片翻拍助手</span>
           </a>
         </div>
-        <article class="file-properties" aria-labelledby="zoea-heading" hidden>
+        <div class="file-grid" data-file-category="mod" hidden>
+          <a class="file-tile" href="#projects/mod/gwent-finder">
+            <canvas class="file-icon" data-icon="gwent" width="68" height="68" aria-hidden="true"></canvas>
+            <span class="file-name" data-file-text data-i18n="gwentFinder">昆特牌狩牌手札</span>
+          </a>
+        </div>
+        <article class="file-properties" data-file-id="film-scan-helper" aria-labelledby="zoea-heading" hidden>
           <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
           <div class="file-body">
             <div class="file-summary">
-              <canvas class="file-icon" width="68" height="68" aria-hidden="true"></canvas>
+              <canvas class="file-icon" data-icon="film" width="68" height="68" aria-hidden="true"></canvas>
               <dl>
                 <dt data-file-text data-i18n="fileName">文件名</dt><dd data-file-text lang="zh-CN">胶片翻拍助手_v2.6.zip</dd>
                 <dt data-file-text data-i18n="fileVersion">版本</dt><dd data-file-text data-i18n="filmScanVersion">v2.6 测试版</dd>
@@ -80,6 +86,31 @@
             <div class="file-download-group">
               <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/raw/refs/heads/main/downloads/film-scan-helper-v2.6.zip" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
               <a class="file-action file-download" href="https://pan.baidu.com/s/1GXz8FWuBG3h045L-k3Ta7A?pwd=cubx" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="baiduDownload">百度网盘下载 ↗</a>
+            </div>
+          </footer>
+        </article>
+        <article class="file-properties" data-file-id="gwent-finder" aria-labelledby="zoea-heading" hidden>
+          <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
+          <div class="file-body">
+            <div class="file-summary">
+              <canvas class="file-icon" data-icon="gwent" width="68" height="68" aria-hidden="true"></canvas>
+              <dl>
+                <dt data-file-text data-i18n="fileName">文件名</dt><dd data-file-text lang="zh-CN">昆特牌狩牌手札-3.0离线测试版.zip</dd>
+                <dt data-file-text data-i18n="fileVersion">版本</dt><dd data-file-text data-i18n="gwentVersion">3.0 离线测试版</dd>
+                <dt data-file-text data-i18n="gwentChecked">核对环境</dt><dd data-file-text data-i18n="gwentSystem">Windows x64 ·《巫师 3》次世代版 5.01</dd>
+              </dl>
+            </div>
+            <div class="file-description">
+              <h3 data-file-text data-i18n="fileDescription">介绍</h3>
+              <p data-file-text data-i18n="gwentIntro">这是给《巫师 3》收集昆特牌用的小工具。它能读取你最近的存档，按地区列出还缺哪些牌。可以按名称搜索、按地区或资料片筛选，也能导出缺牌清单。卡表覆盖本体、《石之心》和《血与酒》。</p>
+              <p data-file-text data-i18n="gwentOffline">解压后运行包内的 EXE。退出游戏后，可以单张补牌，或一次补齐所有未拥有的牌种。工具会生成新的手动存档副本，原档保留。再进游戏载入副本。离线补牌无需安装配套 Mod，也用不到控制台。</p>
+              <p data-file-text data-i18n="gwentFeedback">目前是测试版。存档副本已通过读回校验，尚未在游戏中实际载入验证。建议先试一张，留好原档。任务和成就可能不会随补牌同步。遇到问题或有改进建议，欢迎从首页的平台私信告诉我。</p>
+            </div>
+          </div>
+          <footer class="file-actions">
+            <a class="file-action" href="#projects/mod" data-file-text data-i18n="backToMods">返回 MOD</a>
+            <div class="file-download-group">
+              <a class="file-action file-download" href="https://pan.baidu.com/s/1oPewHIZGFdKUaRa7ilnUsQ?pwd=34wu" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="baiduDownload">百度网盘下载 ↗</a>
             </div>
           </footer>
         </article>
