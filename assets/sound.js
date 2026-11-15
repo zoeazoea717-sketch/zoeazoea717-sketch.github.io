@@ -1,11 +1,14 @@
 (() => {
   const muteButtons = [...document.querySelectorAll('.crt-mute')];
   const screen = document.getElementById('crt-screen');
+  const archive = document.getElementById('zoea-archive');
+  const fileViews = new Set([...archive.querySelectorAll('.file-tile')].map(link=>link.hash.slice(1)));
   const preference = 'zoea.crt.muted';
   const sounds = new Map();
   const icon = new Image();
   let muted = false;
   let playing;
+  let currentView;
 
   try {
     muted = localStorage.getItem(preference) === 'true';
@@ -81,13 +84,20 @@
     const control = event.target.closest('button:not(:disabled),a[href]');
     if (!control || control.matches('.crt-mute,.about-contact,#zoea-qq button')) return;
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
+    if (control.matches('.file-tile,.file-action[href^="#projects/"]')) return;
+    if (fileViews.has(currentView) && control.matches('[data-page],[data-category]')) return;
     if (control.matches('.terminal')) play('enter');
     else if (control.matches('.wordmark')) play('return');
-    else if (control.matches('.file-tile,.file-action[href^="#projects/"]')) play('qq-open');
     else play('select');
   }
   screen.addEventListener('click',playControlCue,{capture:true});
   screen.addEventListener('auxclick',playControlCue,{capture:true});
+  archive.addEventListener('crt-view',event=>{
+    const previous = currentView;
+    currentView = event.detail;
+    if (muted || !previous || previous===currentView || currentView==='home') return;
+    if (fileViews.has(previous) || fileViews.has(currentView)) play('qq-open');
+  });
   screen.addEventListener('crt-qq-toggle',event=>{
     if (!muted) play(event.detail ? 'qq-open' : 'qq-close');
   });
