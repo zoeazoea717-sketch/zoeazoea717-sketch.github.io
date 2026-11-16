@@ -1,7 +1,25 @@
+window.crtGeometry = (() => {
+  const compactTouch = matchMedia([
+    '(hover: none) and (pointer: coarse) and (max-width: 600px)',
+    '(hover: none) and (pointer: coarse) and (max-height: 600px)'
+  ].join(', '));
+  const blend = (flat,curved,bend) => bend===1 ? curved : flat+(curved-flat)*bend;
+  return {
+    compactTouch,
+    fullscreen:matchMedia('(display-mode: fullscreen)'),
+    get bend() { return compactTouch.matches ? .28 : 1; },
+    get tilt() { return compactTouch.matches ? .35 : 1; },
+    blend,
+    glassX: (x,y,bend) => blend(.5*x,.48*x*(1+.044*y*y+.022*x*x),bend),
+    glassY: (x,y,bend) => blend(.5*y,.48*y*(1+.061*x*x+.018*y*y),bend)
+  };
+})();
+
 window.createCrt = function createCrt(root,{closeup=false}={}) {
+  const geometry = window.crtGeometry;
   const source = root.querySelector('.crt-signal');
   const canvas = document.createElement('canvas');
-  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false, antialias: false, depth: false });
+  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
   if (!gl) return;
 
   const vertex = '#version 300 es\nvoid main(){ vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); gl_Position=vec4(p*2.-1.,0.,1.); }';
@@ -10,7 +28,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     'out vec4 color;',
     'uniform vec2 size, viewport, pointer;',
     'uniform vec4 panel, entryCaret;',
-    'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime;',
+    'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime, bend;',
     'uniform bool home, closeup;',
     'uniform sampler2D signalTex;',
     'float bell(float x){return exp(-x*x);}',
@@ -50,7 +68,8 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     'vec4 phosphor(float value, float terrain){',
     '  vec3 amber=min(vec3(1.),vec3(328.,269.,209.)*pow(vec3(clamp(value,0.,1.)),vec3(.79,1.05,1.51))/255.);',
     '  float opacity=max(terrain,amber.r);',
-    '  return vec4(amber/max(.001,opacity),opacity);',
+    // Output premultiplied color for the browser compositor. Preserve the fade below the old normalization floor.
+    '  return vec4(amber*min(1.,opacity/.001),opacity);',
     '}',
     'float entryAfterglow(vec2 point){',
     '  vec2 center=point*viewport*.5;',
@@ -78,16 +97,16 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     '  float wide=1.-.91*pow(squeeze,3.);',
     '  float tall=max(.018,pow(power,1.75));',
     '  vec2 projected=n/vec2(wide,tall);',
-    '  projected.y*=1.+squeeze*(.36+.42*abs(projected.x));',
-    '  projected.x*=1.+squeeze*.22*min(1.,abs(projected.y));',
+    '  projected.y*=1.+squeeze*(.36+.42*bend*abs(projected.x));',
+    '  projected.x*=1.+squeeze*.22*bend*min(1.,abs(projected.y));',
     '  float rasterMask=1.;',
     '  if(entering && home){',
     '    float collapse=smoothstep(45.,155.,entryTime);',
     '    float width=1.-.16*smoothstep(100.,155.,entryTime);',
     '    projected.x=n.x/width;',
-    '    float bow=1.+.26*collapse*projected.x*projected.x;',
+    '    float bow=1.+.26*bend*collapse*projected.x*projected.x;',
     '    projected.y=n.y*bow/max(2./viewport.y,1.-collapse);',
-    '    projected.x*=1.+.06*collapse*min(1.,abs(projected.y));',
+    '    projected.x*=1.+.06*bend*collapse*min(1.,abs(projected.y));',
     '    rasterMask=(1.-smoothstep(.97,1.01,max(abs(projected.x),abs(projected.y))))',
     '      *(1.-smoothstep(136.,155.,entryTime));',
     '    if(rasterMask<=0.){color=phosphor(entryAfterglow(screenN),0.);return;}',
@@ -95,7 +114,9 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     '  } else if(any(greaterThan(abs(projected),vec2(1.)))){color=vec4(0.);return;}',
     '  n=projected;',
     '  float radius=dot(n,n);',
-    '  vec2 glassUV=.5+.48*n*(1.+vec2(.044,.061)*n.yx*n.yx+vec2(.022,.018)*n*n);',
+    '  vec2 glass=.48*n*(1.+vec2(.044,.061)*n.yx*n.yx+vec2(.022,.018)*n*n);',
+    '  if(bend<1.) glass=mix(.5*n,glass,bend);',
+    '  vec2 glassUV=.5+glass;',
     '  if(closeup) glassUV=mix(uv,glassUV,.38);',
     '  if(!home && !closeup) glassUV=archivePerspective(glassUV);',
     '  vec2 q=glassUV;',
@@ -199,7 +220,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
   gl.useProgram(program);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   const uniforms = Object.fromEntries(
-    ['size','viewport','pointer','pointerPresence','panel','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret']
+    ['size','viewport','pointer','pointerPresence','panel','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret','bend']
       .map(name => [name, gl.getUniformLocation(program, name)])
   );
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -239,11 +260,13 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
       y += (targetY-y)*(1-Math.exp(-dt*10));
       presence += (Number(pointerInside)-presence)*(1-Math.exp(-dt*14));
     }
-    updateHitAreas?.(x,y);
+    const bend = geometry.bend, tilt = geometry.tilt;
+    const pointerX = x*tilt, pointerY = y*tilt;
+    updateHitAreas?.(pointerX,pointerY,bend);
     const redraw = lastScene === -Infinity || (animateSignal && !reduced.matches && now-lastScene >= 15);
     if (renderScene && (holdHome ? !textureWidth : redraw)) {
       const still = reduced.matches;
-      upload(renderScene(still ? 0 : seconds, x, y, still));
+      upload(renderScene(still ? 0 : seconds, pointerX, pointerY, still));
       lastScene = now;
     }
     const scale = Math.min(Math.max(1, devicePixelRatio), 2.5, Math.sqrt(7500000/(w*h)));
@@ -255,7 +278,8 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     gl.viewport(0, 0, width, height);
     gl.uniform2f(uniforms.size, width, height);
     gl.uniform2f(uniforms.viewport, w, h);
-    gl.uniform2f(uniforms.pointer, x, y);
+    gl.uniform2f(uniforms.pointer, pointerX, pointerY);
+    gl.uniform1f(uniforms.bend, bend);
     gl.uniform1f(uniforms.pointerPresence,presence);
     gl.uniform4fv(uniforms.panel,panelBounds);
     gl.uniform1f(uniforms.panelRefresh,reduced.matches ? 1 : cap((now-refreshStart)/570,0,1));
@@ -302,6 +326,10 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
       pointerInside = false;
       seconds = Math.max(seconds, .95);
     }
+    lastScene = -Infinity;
+    schedule();
+  });
+  geometry.compactTouch.addEventListener('change',()=>{
     lastScene = -Infinity;
     schedule();
   });

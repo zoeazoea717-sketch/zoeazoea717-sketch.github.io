@@ -4,6 +4,7 @@
   const glass = document.getElementById('crt-screen');
   const home = document.getElementById('zoea-monitor');
   const archive = document.getElementById('zoea-archive');
+  const geometry = window.crtGeometry;
   const fileTiles = new Map([...archive.querySelectorAll('.file-tile')].map(tile=>[tile.hash.slice(1),tile]));
   const projectRoutes = new Set(['projects','projects/works','projects/plugins','projects/mod',...fileTiles.keys()]);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -13,7 +14,7 @@
   const fieldCtx = field.getContext('2d');
   const dots = [], streams = [];
   let cellPitch = 5.5;
-  let width = 0, height = 0, scale = 1;
+  let width = 0, height = 0, scale = 1, bend = 1;
   let lastPaint = -Infinity;
   let frame = 0, current, requestedView, revision = 0, effect;
   let poweringOff = false;
@@ -35,14 +36,15 @@
   function project(x,y) {
     const nx = 2*x/width-1, ny = 2*y/height-1;
     return [
-      x-(.044*ny*ny+.022*nx*nx-.04)*nx*width/2,
-      y-(.061*nx*nx+.018*ny*ny-.04)*ny*height/2
+      x-(.044*ny*ny+.022*nx*nx-.04)*nx*width/2*bend,
+      y-(.061*nx*nx+.018*ny*ny-.04)*ny*height/2*bend
     ];
   }
 
   function resize() {
     width = background.clientWidth;
     height = background.clientHeight;
+    bend = geometry.bend;
     scale = Math.min(devicePixelRatio || 1,2);
     field.width = streamLayer.width = background.width = Math.round(width*scale);
     field.height = streamLayer.height = background.height = Math.round(height*scale);
@@ -139,6 +141,7 @@
     if (!frame && !document.hidden) frame = requestAnimationFrame(draw);
   }
   new ResizeObserver(resize).observe(background);
+  geometry.compactTouch.addEventListener('change',resize);
   document.addEventListener('visibilitychange',schedule);
   reduced.addEventListener('change',schedule);
 

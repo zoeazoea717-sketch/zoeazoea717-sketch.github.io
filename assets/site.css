@@ -2,7 +2,10 @@ html {
   color-scheme: dark;
   background: radial-gradient(ellipse at 24% 30%,#241209,#100905 74%) fixed;
   --terminal-font: 'Lucida Console','Courier New','Microsoft YaHei UI',monospace;
+  --crt-text-scale: 1;
 }
+html:fullscreen { --crt-text-scale: 2; }
+@media (display-mode: fullscreen) { html { --crt-text-scale: 2; } }
 body { margin: 0; }
 #crt-screen { position: relative; min-height:100svh; }
 #crt-screen > [hidden] { display:none; }

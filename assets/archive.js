@@ -1,5 +1,6 @@
 (() => {
   const root = document.getElementById('zoea-archive');
+  const geometry = window.crtGeometry;
   window.createCrt(root);
   const find = selector => root.querySelector(selector);
   const canvas = find('.crt-signal');
@@ -9,6 +10,20 @@
   const heading = find('#zoea-heading');
   const panel = find('.crt-panel');
   const aboutContent = find('.about-content');
+  const worksLock = find('.works-lock');
+  const worksReady = find('.works-unlocked');
+  const worksPassword = find('#zoea-works-password');
+  const worksSubmit = worksLock.querySelector('button');
+  const worksStatus = find('#zoea-works-access-status');
+  const worksToken = '23fd7c32ae6aa3c05b72677ecb055e26e95d8d2e002462bbbbe9ce7346ee107d';
+  const worksSessionKey = 'zoea.works.access';
+  let worksUnlocked = false, checkingPassword = false;
+  let worksError;
+  try {
+    worksUnlocked = sessionStorage.getItem(worksSessionKey)===worksToken;
+  } catch {
+    // Keep the unlock in memory if session storage is unavailable.
+  }
   const fileGrids = [...root.querySelectorAll('.file-grid')];
   const fileTiles = [...root.querySelectorAll('.file-tile')];
   const fileDetails = new Map([...root.querySelectorAll('.file-properties')]
@@ -21,7 +36,8 @@
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
-  const controls = [...root.querySelectorAll('header a, header button, .list button, .about-contact, .file-tile, .file-action')];
+  const controlSelector = 'header a, header button, .list button, .about-contact, .file-tile, .file-action, .works-lock input, .works-lock button';
+  const controls = [...root.querySelectorAll(controlSelector)];
   const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   let current = 'project';
@@ -72,11 +88,12 @@
       return {control,left,top,width:box.width,height:box.height,corners};
     });
 
-    let lastX, lastY;
-    root.crtLive.setHitAreaUpdater((x,y)=>{
-      if (Math.abs(x-lastX)<.0003 && Math.abs(y-lastY)<.0003) return;
+    let lastX, lastY, lastBend;
+    root.crtLive.setHitAreaUpdater((x,y,bend)=>{
+      if (bend===lastBend && Math.abs(x-lastX)<.0003 && Math.abs(y-lastY)<.0003) return;
       lastX = x;
       lastY = y;
+      lastBend = bend;
       // Forward projection of the same tilted plane the CRT shader samples.
       const sx = Math.sin(y*.063), cx = Math.cos(y*.063);
       const sy = Math.sin(-x*.080), cy = Math.cos(-x*.080);
@@ -87,8 +104,8 @@
           const flatY = 2.3*cx*v/depth;
           let px = nx, py = ny;
           for (let i=0;i<5;i++) {
-            const curvedX = .48*px*(1+.044*py*py+.022*px*px);
-            const curvedY = .48*py*(1+.061*px*px+.018*py*py);
+            const curvedX = geometry.glassX(px,py,bend);
+            const curvedY = geometry.glassY(px,py,bend);
             px += 2*(flatX-curvedX);
             py += 2*(flatY-curvedY);
           }
@@ -141,9 +158,9 @@
     const screen = display.getBoundingClientRect();
     const range = document.createRange();
     const layout = [];
-    for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, .about-content :is(h2,p), .list button, [data-file-text]')) {
+    for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, .about-content :is(h2,p), .list button, [data-file-text], [data-works-text]')) {
       if (!label.getClientRects().length) continue;
-      if (!root.crtLive && (aboutContent.contains(label) || label.hasAttribute('data-file-text'))) continue;
+      if (!root.crtLive && (aboutContent.contains(label) || label.matches('[data-file-text],[data-works-text]'))) continue;
       const text = label.firstChild;
       if (text?.nodeType !== Node.TEXT_NODE) continue;
       const {fontWeight,fontSize,fontFamily,textAlign} = getComputedStyle(label);
@@ -173,18 +190,23 @@
       const {left,top,width,height} = measureBox(icon);
       return {x:left+width/2,y:top+height/2,width,height};
     }
-    const divider = openFile?.querySelector('.file-divider');
+    const file = openFile && !openFile.hidden ? openFile : null;
+    const divider = file?.querySelector('.file-divider');
     return {layout,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
-      properties:openFile ? {
-        box:measureBox(openFile),bar:measureBox(openFile.querySelector('.file-bar')),
-        footer:measureBox(openFile.querySelector('.file-actions')),
+      properties:file ? {
+        box:measureBox(file),bar:measureBox(file.querySelector('.file-bar')),
+        footer:measureBox(file.querySelector('.file-actions')),
         divider:divider ? measureBox(divider) : null
       } : null,
-      actions:openFile ? [...openFile.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : []
+      actions:file ? [...file.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : [],
+      lock:worksLock.hidden ? null : {
+        box:measureBox(worksLock),input:measureBox(worksPassword),button:measureBox(worksSubmit),
+        symbol:measureBox(worksLock.querySelector('.works-lock-symbol'))
+      }
     };
   }
 
@@ -194,7 +216,7 @@
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,soundIcon,contactIcon,tiles,properties,files,actions} = labelLayout ?? measureLabels();
+    const {layout,soundIcon,contactIcon,tiles,properties,files,actions,lock} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -205,6 +227,19 @@
       }
       for (const {tile,...box} of tiles) {
         if (highlighted(tile)) outline(box,.36);
+      }
+      if (lock) {
+        outline(lock.box,.35);
+        outline(lock.input,highlighted(worksPassword) || worksError ? .80 : .46);
+        outline(lock.button,highlighted(worksSubmit) ? .86 : .54);
+        const {left,top,width:w,height:h} = lock.symbol;
+        labelsCtx.globalAlpha = .90;
+        labelsCtx.beginPath();
+        labelsCtx.ellipse(left+w*.5,top+h*.42,w*.22,h*.32,0,Math.PI,2*Math.PI);
+        labelsCtx.stroke();
+        labelsCtx.strokeRect(left+w*.16,top+h*.42,w*.68,h*.46);
+        labelsCtx.fillStyle = textPhosphor;
+        labelsCtx.fillRect(left+w*.46,top+h*.57,w*.08,h*.15);
       }
       if (properties) {
         const {box,bar,footer,divider} = properties;
@@ -234,7 +269,7 @@
         || label.getAttribute('aria-current') === 'page';
       labelsCtx.font = fontWeight+' '+fontSize+' '+fontFamily;
       labelsCtx.textBaseline = 'middle';
-      const fileText = label.hasAttribute('data-file-text');
+      const fileText = label.matches('[data-file-text],[data-works-text]');
       labelsCtx.fillStyle = fileText ? textPhosphor : '#fff';
       const descriptionHeading = label.matches('h2,h3');
       labelsCtx.globalAlpha = fileText ? .91 : active ? .69 : descriptionHeading ? .74 : .56;
@@ -515,6 +550,7 @@
   }
 
   function renderFallback(w,h) {
+    const bend = geometry.bend;
     const scale = Math.min(Math.max(devicePixelRatio || 1,1.25),1.6,1400/w,1050/h);
     const width = canvas.width = Math.round(w*scale);
     const height = canvas.height = Math.round(h*scale);
@@ -528,8 +564,8 @@
       for (let x=0;x<width;x++) {
         const dx = 2*(x+.5)/width-1;
         const radius = dx*dx+dy*dy;
-        const u = (dx*(1+.044*dy*dy+.022*dx*dx)*.96+1)*width/2-.5;
-        const v = (dy*(1+.061*dx*dx+.018*dy*dy)*.96+1)*height/2-.5;
+        const u = (geometry.blend(dx,dx*(1+.044*dy*dy+.022*dx*dx)*.96,bend)+1)*width/2-.5;
+        const v = (geometry.blend(dy,dy*(1+.061*dx*dx+.018*dy*dy)*.96,bend)+1)*height/2-.5;
         const sx = Math.max(0,Math.min(width-1.001,u));
         const sy = Math.max(0,Math.min(height-1.001,v));
         const col = Math.floor(sx), row = Math.floor(sy);
@@ -563,19 +599,30 @@
   function updateContent() {
     const about = current==='about';
     const category = list.children[selected];
-    const path = category.dataset.category.toUpperCase();
+    const categoryId = category.dataset.category;
+    const works = !about && categoryId==='works';
+    const locked = works && !worksUnlocked;
+    const file = locked || about ? null : openFile;
+    const path = categoryId.toUpperCase();
     const {text} = window.zoeaLocale;
-    const label = about ? text('aboutHeading','关于 ZOEA') : openFile ? text('fileDetails','文件详情') : category.textContent;
+    const label = about ? text('aboutHeading','关于 ZOEA') : file ? text('fileDetails','文件详情') : category.textContent;
     heading.textContent = label;
     find('#zoea-directory').textContent = about ? 'C:\\ZOEA\\ABOUT>' :
-      'C:\\ZOEA\\PROJECTS\\'+path+(openFile ? '\\'+(openFile.dataset.fileId ?? 'film-scan-helper').toUpperCase() : '')+'>';
+      'C:\\ZOEA\\PROJECTS\\'+path+(file ? '\\'+(file.dataset.fileId ?? 'film-scan-helper').toUpperCase() : '')+'>';
     root.dataset.view = current;
-    root.toggleAttribute('data-file-open',Boolean(openFile));
+    root.toggleAttribute('data-file-open',Boolean(file));
     aboutContent.hidden = !about;
-    for (const grid of fileGrids) {
-      grid.hidden = about || Boolean(openFile) || (grid.dataset.fileCategory ?? 'plugins')!==category.dataset.category;
+    worksLock.hidden = !locked;
+    worksReady.hidden = !works || locked || Boolean(file) || fileTiles.some(tile=>tile.hash.startsWith('#projects/works/'));
+    if (!locked) {
+      worksPassword.value = '';
+      worksError = null;
     }
-    for (const detail of fileDetails.values()) detail.hidden = detail!==openFile;
+    updateWorksStatus();
+    for (const grid of fileGrids) {
+      grid.hidden = about || locked || Boolean(file) || (grid.dataset.fileCategory ?? 'plugins')!==categoryId;
+    }
+    for (const detail of fileDetails.values()) detail.hidden = detail!==file;
     canvas.setAttribute('aria-label',label);
     [...list.children].forEach((button,i)=>button.setAttribute('aria-pressed',String(!about && i===selected)));
     root.querySelectorAll('[data-page]').forEach(button=>{
@@ -584,6 +631,48 @@
     });
     render();
   }
+
+  function updateWorksStatus() {
+    const {text} = window.zoeaLocale;
+    worksStatus.hidden = !worksError;
+    worksStatus.textContent = worksError ? text(...worksError) : '';
+    worksPassword.setAttribute('aria-invalid',String(worksError?.[0]==='worksIncorrect'));
+  }
+
+  worksPassword.addEventListener('input',()=>{
+    if (!worksError) return;
+    worksError = null;
+    updateWorksStatus();
+    render();
+  });
+  worksLock.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if (checkingPassword || worksLock.hidden) return;
+    checkingPassword = true;
+    try {
+      const buffer = await crypto.subtle.digest('SHA-256',new TextEncoder().encode(worksPassword.value));
+      const digest = Array.from(new Uint8Array(buffer),byte=>byte.toString(16).padStart(2,'0')).join('');
+      if (digest===worksToken) {
+        worksUnlocked = true;
+        try { sessionStorage.setItem(worksSessionKey,worksToken); } catch {}
+        if (worksLock.hidden) return;
+        updateContent();
+        heading.focus({preventScroll:true});
+        refreshPanel();
+        return;
+      }
+      if (worksLock.hidden) return;
+      worksError = ['worksIncorrect','密码不正确，请重试。'];
+      worksPassword.select();
+    } catch {
+      if (worksLock.hidden) return;
+      worksError = ['worksPasswordUnavailable','请通过 HTTPS 打开网站后再试。'];
+    } finally {
+      checkingPassword = false;
+    }
+    updateWorksStatus();
+    render();
+  });
 
   let panelAnimation;
   function refreshPanel() {
@@ -627,8 +716,9 @@
   let qqClosing;
   let qqPointerFrame = 0;
   function setQqPerspective(x,y) {
-    qqGlass.style.setProperty('--qq-tilt-x',`${-y*4.2}deg`);
-    qqGlass.style.setProperty('--qq-tilt-y',`${x*5.1}deg`);
+    const tilt = geometry.tilt;
+    qqGlass.style.setProperty('--qq-tilt-x',`${-y*4.2*tilt}deg`);
+    qqGlass.style.setProperty('--qq-tilt-y',`${x*5.1*tilt}deg`);
     qqGlass.style.setProperty('--qq-light-x',`${50+x*39}%`);
     qqGlass.style.setProperty('--qq-light-y',`${50+y*39}%`);
   }
@@ -652,6 +742,7 @@
   },{passive:true});
   qqDialog.addEventListener('pointerleave',resetQqPerspective);
   reduced.addEventListener('change',resetQqPerspective);
+  geometry.compactTouch.addEventListener('change',resetQqPerspective);
 
   function resetQqAnimation() {
     qqClosing?.cancel();
@@ -719,7 +810,7 @@
     });
   });
   function updateLabelHighlight(event) {
-    if (!root.crtLive || !event.target.closest('.list button, header a, header button, .about-contact, .file-tile, .file-action')) return;
+    if (!root.crtLive || !event.target.closest(controlSelector)) return;
     refreshLabels?.();
     root.crtLive.invalidate();
   }
@@ -727,6 +818,9 @@
     root.addEventListener(event,updateLabelHighlight);
   }
   qqIcon.addEventListener('load',updateLabelHighlight);
+  geometry.fullscreen.addEventListener('change',render);
+  document.addEventListener('fullscreenchange',render);
   new ResizeObserver(()=>render()).observe(display);
+  if (!root.crtLive) geometry.compactTouch.addEventListener('change',render);
 
 })();

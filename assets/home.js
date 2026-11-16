@@ -1,5 +1,6 @@
 (() => {
   const root = document.getElementById('zoea-monitor');
+  const geometry = window.crtGeometry;
   window.createCrt(root);
   const terrainRenderer = root.crtLive && window.createTerrainRenderer?.();
   const screen = root.querySelector('.screen');
@@ -150,18 +151,18 @@
       x*w*.010-y*.026*h*.32,y*h*.009-x*.020*w*.5]);
   }
 
-  function glassSample(x,y,w,h) {
+  function glassSample(x,y,w,h,bend) {
     const nx = x/w*2-1, ny = y/h*2-1;
     return [
-      (.5+.48*nx*(1+.044*ny*ny+.022*nx*nx))*w,
-      (.5+.48*ny*(1+.061*nx*nx+.018*ny*ny))*h
+      (.5+geometry.glassX(nx,ny,bend))*w,
+      (.5+geometry.glassY(nx,ny,bend))*h
     ];
   }
 
-  function screenPoint(x,y,w,h,transform,px,py) {
+  function screenPoint(x,y,w,h,transform,px,py,bend) {
     const moved = transform.transformPoint({x,y});
     for (let i=0;i<4;i++) {
-      const [u,v] = glassSample(px,py,w,h);
+      const [u,v] = glassSample(px,py,w,h,bend);
       px += moved.x-u;
       py += moved.y-v;
     }
@@ -196,19 +197,19 @@
     target.globalAlpha = 1;
   }
 
-  function drawTerminal(target,w,h,time,still,transform) {
-    if (terminalLayout?.w!==w || terminalLayout.h!==h) {
+  function drawTerminal(target,w,h,time,still,transform,bend) {
+    if (terminalLayout?.w!==w || terminalLayout.h!==h || terminalLayout.bend!==bend) {
       const origin = screen.getBoundingClientRect();
       const label = terminalLabel.getBoundingClientRect();
       const caret = terminalCaret.getBoundingClientRect();
       const left = label.left-origin.left-terminalX;
       const top = label.top-origin.top-terminalY;
-      const [x,y] = glassSample(left,top,w,h);
+      const [x,y] = glassSample(left,top,w,h,bend);
       const style = getComputedStyle(terminalLabel);
       const cells = measureTextCells(terminalLabel.textContent,label.width,label.height,
         '700 '+style.fontSize+' '+style.fontFamily,'left');
-      const [cx,cy] = glassSample(caret.left-origin.left-terminalX,caret.top-origin.top-terminalY,w,h);
-      terminalLayout = {w,h,left,top,x,y,cells,cx,cy,cw:caret.width,ch:caret.height};
+      const [cx,cy] = glassSample(caret.left-origin.left-terminalX,caret.top-origin.top-terminalY,w,h,bend);
+      terminalLayout = {w,h,bend,left,top,x,y,cells,cx,cy,cw:caret.width,ch:caret.height};
       root.crtLive.setEntryCaret([(cx+caret.width/2)/w,(cy+caret.height/2)/h,caret.width/2,caret.height/2]);
     }
     const layout = terminalLayout;
@@ -219,7 +220,7 @@
       target.fillRect(layout.cx,layout.cy,layout.cw,layout.ch);
     }
     target.globalAlpha = 1;
-    const [px,py] = screenPoint(layout.x,layout.y,w,h,transform,layout.left,layout.top);
+    const [px,py] = screenPoint(layout.x,layout.y,w,h,transform,layout.left,layout.top,bend);
     const dx = px-layout.left, dy = py-layout.top;
     if (Math.abs(terminalX-dx)>.10 || Math.abs(terminalY-dy)>.10) {
       terminalX = dx;
@@ -230,18 +231,18 @@
     root.classList.add('crt-terminal-ready');
   }
 
-  function drawPortals(target,w,h,transform) {
-    if (portalLayout?.w!==w || portalLayout.h!==h) {
+  function drawPortals(target,w,h,transform,bend) {
+    if (portalLayout?.w!==w || portalLayout.h!==h || portalLayout.bend!==bend) {
       if (portalIcons.some(({image})=>image && (!image.complete || !image.naturalWidth))) return;
       const origin = screen.getBoundingClientRect();
       const icons = portalIcons.map(portal=>{
         const box = portal.mark.getBoundingClientRect();
         const x = box.left-origin.left+box.width/2-portal.dx;
         const y = box.top-origin.top+box.height/2-portal.dy;
-        const [sx,sy] = glassSample(x,y,w,h);
+        const [sx,sy] = glassSample(x,y,w,h,bend);
         return {portal,x,y,sx,sy,width:box.width,height:box.height};
       });
-      portalLayout = {w,h,icons};
+      portalLayout = {w,h,bend,icons};
     }
     for (const {portal,x,y,sx,sy,width,height} of portalLayout.icons) {
       const {control,image,mark} = portal;
@@ -271,7 +272,7 @@
       }
 
       // Align each native hit area with the rendered icon after projection.
-      const [px,py] = screenPoint(sx,sy,w,h,transform,x,y);
+      const [px,py] = screenPoint(sx,sy,w,h,transform,x,y,bend);
       const dx = px-x, dy = py-y;
       if (Math.abs(dx-portal.dx)>.08 || Math.abs(dy-portal.dy)>.08) {
         portal.dx = dx;
@@ -327,8 +328,9 @@
       }
     }
     if (live) {
-      drawTerminal(target,w,h,time,still,transform);
-      drawPortals(target,w,h,transform);
+      const bend = geometry.bend;
+      drawTerminal(target,w,h,time,still,transform,bend);
+      drawPortals(target,w,h,transform,bend);
     }
     target.restore();
   }
@@ -542,6 +544,7 @@
   });
 
   function project(w,h) {
+    const bend = geometry.bend;
     const [signal,diffuse,halo] = buildSignal(w,h)
       .map(layer=>layer.getContext('2d').getImageData(0,0,w,h).data);
     const surface = ctx.createImageData(w,h);
@@ -556,8 +559,8 @@
         const idx = (y*w+x)*4;
         const radius = dx*dx+dy*dy;
         // Inverse mapping makes the tube's center bulge out toward the viewer.
-        const sx = ((dx*(1+.044*dy*dy+.022*dx*dx)*.96)+1)*centerX-.5;
-        const sy = ((dy*(1+.061*dx*dx+.018*dy*dy)*.96)+1)*centerY-.5;
+        const sx = (geometry.blend(dx,dx*(1+.044*dy*dy+.022*dx*dx)*.96,bend)+1)*centerX-.5;
+        const sy = (geometry.blend(dy,dy*(1+.061*dx*dx+.018*dy*dy)*.96,bend)+1)*centerY-.5;
         const vignette = Math.max(.57,1-(.065*dx*dx+.083*dy*dy+.059*radius*radius));
         const grain = random()-.5;
         const reflected = .075*bell((dx+.50)/.79)*bell((dy+.56-.20*dx)/.43)
@@ -604,7 +607,7 @@
     const height = screen.clientHeight;
     if (width < 2 || height < 2) return;
     const density = devicePixelRatio || 1;
-    const size = width+'x'+height+'@'+density;
+    const size = width+'x'+height+'@'+density+'/'+geometry.bend;
     if (size===dimensions) return;
     const first = !dimensions;
     dimensions = size;
@@ -658,6 +661,14 @@
   }
 
   new ResizeObserver(render).observe(screen);
+  if (!root.crtLive) geometry.compactTouch.addEventListener('change',render);
+  function refreshTypography() {
+    terminalLayout = portalLayout = null;
+    for (const portal of portalIcons) portal.text = null;
+    root.crtLive?.invalidate();
+  }
+  geometry.fullscreen.addEventListener('change',refreshTypography);
+  document.addEventListener('fullscreenchange',refreshTypography);
   render();
 
   for (const {control,image} of portalIcons) {

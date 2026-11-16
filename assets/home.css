@@ -30,12 +30,15 @@
     z-index: 1;
   }
   #zoea-monitor :is(.crt-mute,.crt-language) { top: clamp(7px,2vw,20px); }
-  #zoea-monitor .crt-language { left: calc(var(--mute-inset) + 44px); }
+  #zoea-monitor .crt-language {
+    left: calc(var(--mute-inset) + 44px);
+    width: max(44px,calc(26px * var(--crt-text-scale)));
+  }
   #zoea-monitor .crt-language-label {
-    width: 24px;
-    height: 20px;
+    width: calc(24px * var(--crt-text-scale));
+    height: calc(20px * var(--crt-text-scale));
     color: #ffdca3;
-    font: 700 16px/20px var(--terminal-font);
+    font: 700 calc(16px * var(--crt-text-scale))/1.25 var(--terminal-font);
     text-align: center;
     text-shadow: 0 0 4px #ff9d4bab;
   }
@@ -83,7 +86,7 @@
     grid-auto-flow: column;
     place-content: center;
     min-height: 44px;
-    font-size: clamp(18px,2.3vw,25px);
+    font-size: calc(clamp(18px,2.3vw,25px) * var(--crt-text-scale));
     letter-spacing: .07em;
     text-shadow: 0 0 4px #ffbf7bb8,0 0 13px #f89547ac,0 0 24px #e079334f;
   }

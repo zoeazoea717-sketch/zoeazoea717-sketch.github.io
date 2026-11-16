@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#100905">
   <title>ZOEA</title>
-  <link rel="stylesheet" href="./assets/site.css">
-  <link rel="stylesheet" href="./assets/home.css">
-  <link rel="stylesheet" href="./assets/archive.css?v=detail-layout">
-  <script defer src="./assets/language.js?v=gwent-3.0"></script>
-  <script defer src="./assets/motion.js"></script>
-  <script defer src="./assets/shell.js?v=gwent-3.0"></script>
+  <link rel="stylesheet" href="./assets/site.css?v=works-access">
+  <link rel="stylesheet" href="./assets/home.css?v=works-access">
+  <link rel="stylesheet" href="./assets/archive.css?v=works-access">
+  <script defer src="./assets/language.js?v=works-access"></script>
+  <script defer src="./assets/motion.js?v=works-access"></script>
+  <script defer src="./assets/shell.js?v=mobile-geometry"></script>
   <script defer src="./assets/terrain.js"></script>
   <script defer src="./assets/sound.js?v=file-navigation"></script>
-  <script defer src="./assets/home.js"></script>
-  <script defer src="./assets/archive.js?v=detail-art"></script>
+  <script defer src="./assets/home.js?v=works-access"></script>
+  <script defer src="./assets/archive.js?v=works-access"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -51,6 +51,20 @@
       <div class="intro">
         <p class="prompt" id="zoea-directory">C:\ZOEA\PROJECTS&gt;</p>
         <h1 id="zoea-heading" tabindex="-1">作品</h1>
+        <form class="works-lock" aria-labelledby="zoea-works-lock-title" hidden>
+          <div class="works-lock-title">
+            <span class="works-lock-symbol" aria-hidden="true"></span>
+            <h2 id="zoea-works-lock-title" data-works-text data-i18n="worksLocked">作品页已锁定</h2>
+          </div>
+          <label for="zoea-works-password" data-works-text data-i18n="worksPassword">访问密码</label>
+          <div class="works-lock-fields">
+            <input id="zoea-works-password" type="password" aria-describedby="zoea-works-access-hint zoea-works-access-status" autocomplete="off" maxlength="128" required>
+            <button type="submit" data-works-text data-i18n="worksUnlock">解锁</button>
+          </div>
+          <p id="zoea-works-access-hint" data-works-text data-i18n="worksAccessHint">请向作者申请作品页访问权限</p>
+          <p id="zoea-works-access-status" data-works-text role="status" hidden></p>
+        </form>
+        <p class="works-unlocked" data-works-text data-i18n="worksUnlocked" hidden>作品页已解锁</p>
         <div class="file-grid" data-file-category="plugins" hidden>
           <a class="file-tile" href="#projects/plugins/film-scan-helper">
             <canvas class="file-icon" data-icon="film" width="68" height="68" aria-hidden="true"></canvas>
