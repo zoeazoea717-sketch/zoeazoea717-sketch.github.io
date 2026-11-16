@@ -15,6 +15,7 @@
   #zoea-archive button:hover { color:#fff0c3; text-shadow:0 0 10px #f6a448; }
   #zoea-archive .wordmark { font-size:calc(18px * var(--crt-text-scale)); font-weight:700; letter-spacing:.13em; text-shadow:0 0 9px #f48b3575; }
   #zoea-archive nav { display:flex; gap:clamp(9px,2.5vw,28px); }
+  #zoea-archive :is(header nav,.index .list) { font-size:var(--archive-menu-size,inherit); }
   #zoea-archive :is(.about-content,.file-grid,.file-properties)[hidden] { display:none; }
   #zoea-archive nav button { padding:0 7px; color:var(--dim); }
   #zoea-archive nav [aria-current="page"] { color:var(--pale); box-shadow:inset 0 -1px var(--gold); text-shadow:0 0 10px #ff9d43a1; }
@@ -119,22 +120,27 @@
     margin-top:clamp(8px,1.8vw,22px);
   }
   #zoea-archive .file-tile {
-    width:min(100%,146px);
-    min-height:116px;
+    --tile-scale:var(--archive-tile-scale,1);
+    width:min(100%,calc(146px * var(--tile-scale)));
+    min-height:calc(116px * var(--tile-scale));
     display:grid;
     justify-items:center;
     align-content:center;
-    gap:8px;
-    padding:8px 5px;
+    gap:calc(8px * var(--tile-scale));
+    padding:calc(8px * var(--tile-scale)) calc(5px * var(--tile-scale));
     border:1px solid transparent;
     text-align:center;
     cursor:pointer;
   }
-  #zoea-archive .file-name { font-size:calc(clamp(14px,1.55vw,16px) * var(--crt-text-scale)); font-weight:700; }
+  #zoea-archive .file-name {
+    font-size:calc(clamp(14px,1.55vw,16px) * max(var(--crt-text-scale),var(--tile-scale)));
+    font-weight:700;
+  }
   #zoea-archive .file-icon {
     width:68px; height:68px;
     filter:invert(.20) sepia(.67) saturate(2.5) drop-shadow(0 0 4px #ed9a5890);
   }
+  #zoea-archive .file-tile .file-icon { width:calc(68px * var(--tile-scale)); height:calc(68px * var(--tile-scale)); }
   #zoea-archive.crt-ready.crt-live-ready .file-icon { opacity:0; }
   #zoea-archive:not(.crt-live-ready) .file-tile:is(:hover,:focus-visible) { border-color:#d28e5270; }
   #zoea-archive .file-properties {
@@ -320,4 +326,16 @@
     #zoea-archive .file-summary dl { grid-template-columns:minmax(0,1fr); gap:2px; }
     #zoea-archive .file-summary dd:not(:last-child) { margin-bottom:4px; }
     #zoea-archive .file-description p:lang(en) { text-align:start; }
+  }
+  @media(min-width:1440px) {
+    #zoea-archive { --archive-menu-size:calc(14px * 1.6 * .7); --archive-tile-scale:1.25; }
+  }
+  @media(min-width:1280px) {
+    html:where(:fullscreen) #zoea-archive { --archive-menu-size:calc(14px * 2.65 * .7); --archive-tile-scale:1.65; }
+  }
+  @media(min-width:1280px) and (display-mode:fullscreen), (min-width:1800px) {
+    #zoea-archive { --archive-menu-size:calc(14px * 2.65 * .7); --archive-tile-scale:1.65; }
+  }
+  @media(min-width:2560px) {
+    #zoea-archive { --archive-menu-size:calc(14px * 3.2 * .7); --archive-tile-scale:2.1; }
   }
