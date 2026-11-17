@@ -16,7 +16,7 @@
   #zoea-archive .wordmark { font-size:calc(18px * var(--crt-text-scale)); font-weight:700; letter-spacing:.13em; text-shadow:0 0 9px #f48b3575; }
   #zoea-archive nav { display:flex; gap:clamp(9px,2.5vw,28px); }
   #zoea-archive :is(header nav,.index .list) { font-size:var(--archive-menu-size,inherit); }
-  #zoea-archive :is(.about-content,.file-grid,.file-properties)[hidden] { display:none; }
+  #zoea-archive :is(.about-content,.tool-directory,.file-grid,.file-properties)[hidden] { display:none; }
   #zoea-archive nav button { padding:0 7px; color:var(--dim); }
   #zoea-archive nav [aria-current="page"] { color:var(--pale); box-shadow:inset 0 -1px var(--gold); text-shadow:0 0 10px #ff9d43a1; }
   #zoea-archive main {
@@ -112,6 +112,11 @@
   }
   #zoea-archive.crt-ready.crt-live-ready .works-lock-symbol { visibility:hidden; }
   #zoea-archive.crt-ready.crt-live-ready .works-lock input:focus-visible { outline:none; }
+  #zoea-archive .tool-directory { margin-top:clamp(8px,1.8vw,22px); }
+  #zoea-archive .tool-directory section + section { margin-top:clamp(6px,1.4vh,16px); }
+  #zoea-archive .tool-directory h2 { margin:0; font-size:var(--archive-menu-size,1.15em); }
+  #zoea-archive .tool-disclosure { cursor:pointer; text-align:left; }
+  #zoea-archive .tool-directory .file-grid { margin-top:0; }
   #zoea-archive .file-grid {
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
@@ -183,6 +188,7 @@
   #zoea-archive .file-description h3 { margin:0 0 5px; font-size:inherit; }
   #zoea-archive .file-description p { margin:0; color:#ddba8c; text-align:justify; }
   #zoea-archive .file-description p+p { margin-top:.65em; }
+  #zoea-archive .file-source { display:inline-flex; align-items:center; min-height:44px; color:var(--pale); }
   #zoea-archive .file-actions {
     display:flex; flex-wrap:wrap; align-items:center; gap:8px;
     padding:9px clamp(11px,2vw,20px);

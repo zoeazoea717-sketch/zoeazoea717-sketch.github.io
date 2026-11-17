@@ -7,14 +7,14 @@
   <title>ZOEA</title>
   <link rel="stylesheet" href="./assets/site.css?v=works-access">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
-  <link rel="stylesheet" href="./assets/archive.css?v=directory-tiles">
-  <script defer src="./assets/language.js?v=works-access"></script>
+  <link rel="stylesheet" href="./assets/archive.css?v=tools-directory">
+  <script defer src="./assets/language.js?v=tools-directory"></script>
   <script defer src="./assets/motion.js?v=works-access"></script>
-  <script defer src="./assets/shell.js?v=mobile-geometry"></script>
+  <script defer src="./assets/shell.js?v=tools-directory"></script>
   <script defer src="./assets/terrain.js"></script>
   <script defer src="./assets/sound.js?v=file-navigation"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=works-access"></script>
+  <script defer src="./assets/archive.js?v=tools-directory"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -65,17 +65,29 @@
           <p id="zoea-works-access-status" data-works-text role="status" hidden></p>
         </form>
         <p class="works-unlocked" data-works-text data-i18n="worksUnlocked" hidden>作品页已解锁</p>
-        <div class="file-grid" data-file-category="plugins" hidden>
-          <a class="file-tile" href="#projects/plugins/film-scan-helper">
-            <canvas class="file-icon" data-icon="film" width="68" height="68" aria-hidden="true"></canvas>
-            <span class="file-name" data-file-text data-i18n="filmScanHelper">胶片翻拍助手</span>
-          </a>
-        </div>
-        <div class="file-grid" data-file-category="mod" hidden>
-          <a class="file-tile" href="#projects/mod/gwent-finder">
-            <canvas class="file-icon" data-icon="gwent" width="68" height="68" aria-hidden="true"></canvas>
-            <span class="file-name" data-file-text data-i18n="gwentFinder">昆特牌狩牌手札</span>
-          </a>
+        <div class="tool-directory" hidden>
+          <section>
+            <h2><button type="button" class="tool-disclosure" data-group="mod" aria-expanded="true" aria-controls="files-mod" data-file-text>▾ MOD</button></h2>
+            <div class="file-grid" id="files-mod">
+              <a class="file-tile" href="#projects/tools/gwent-finder">
+                <canvas class="file-icon" data-icon="gwent" width="68" height="68" aria-hidden="true"></canvas>
+                <span class="file-name" data-file-text data-i18n="gwentFinder">昆特牌狩牌手札</span>
+              </a>
+            </div>
+          </section>
+          <section>
+            <h2><button type="button" class="tool-disclosure" data-group="programs" aria-expanded="true" aria-controls="files-programs" data-file-text>▾ 程序</button></h2>
+            <div class="file-grid" id="files-programs">
+              <a class="file-tile" href="#projects/tools/film-scan-helper">
+                <canvas class="file-icon" data-icon="film" width="68" height="68" aria-hidden="true"></canvas>
+                <span class="file-name" data-file-text data-i18n="filmScanHelper">胶片翻拍助手</span>
+              </a>
+              <a class="file-tile" href="#projects/tools/web-video-downloader">
+                <canvas class="file-icon" data-icon="downloader" width="68" height="68" aria-hidden="true"></canvas>
+                <span class="file-name" data-file-text data-i18n="videoDownloader">网页视频下载器</span>
+              </a>
+            </div>
+          </section>
         </div>
         <article class="file-properties" data-file-id="film-scan-helper" aria-labelledby="zoea-heading" hidden>
           <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
@@ -97,7 +109,7 @@
             </div>
           </div>
           <footer class="file-actions">
-            <a class="file-action" href="#projects/plugins" data-file-text data-i18n="backToPlugins">返回插件</a>
+            <a class="file-action" href="#projects/tools" data-file-text data-i18n="backToTools">返回工具</a>
             <div class="file-download-group">
               <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/raw/refs/heads/main/downloads/film-scan-helper-v2.6.zip" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
               <a class="file-action file-download" href="https://pan.baidu.com/s/1GXz8FWuBG3h045L-k3Ta7A?pwd=cubx" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="baiduDownload">百度网盘下载 ↗</a>
@@ -124,10 +136,37 @@
             </div>
           </div>
           <footer class="file-actions">
-            <a class="file-action" href="#projects/mod" data-file-text data-i18n="backToMods">返回 MOD</a>
+            <a class="file-action" href="#projects/tools" data-file-text data-i18n="backToTools">返回工具</a>
             <div class="file-download-group">
               <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/releases/download/gwent-finder-v3.0-offline-beta/gwent-finder-3.0-offline-beta.zip" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
               <a class="file-action file-download" href="https://pan.baidu.com/s/1oPewHIZGFdKUaRa7ilnUsQ?pwd=34wu" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="baiduDownload">百度网盘下载 ↗</a>
+            </div>
+          </footer>
+        </article>
+        <article class="file-properties" data-file-id="web-video-downloader" aria-labelledby="zoea-heading" hidden>
+          <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
+          <div class="file-body">
+            <div class="file-summary">
+              <dl>
+                <dt data-file-text data-i18n="fileName">文件名</dt><dd data-file-text>web-video-downloader-1.1.0-x64.exe</dd>
+                <dt data-file-text data-i18n="fileVersion">版本</dt><dd data-file-text>1.1.0</dd>
+                <dt data-file-text data-i18n="fileRequires">适用环境</dt><dd data-file-text>Windows x64</dd>
+              </dl>
+              <canvas class="file-icon file-art" data-icon="downloader" width="68" height="68" aria-hidden="true"></canvas>
+            </div>
+            <div class="file-divider" aria-hidden="true"></div>
+            <div class="file-description">
+              <h3 data-file-text data-i18n="fileDescription">介绍</h3>
+              <a class="file-source" data-file-text data-i18n="downloaderCredit" href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener noreferrer">基于 yt-dlp 开发 ↗</a>
+              <p data-file-text data-i18n="downloaderIntro">把想保存的视频链接粘贴进来，选好文件夹，就可以交给队列慢慢下。一回要存好几个视频时，也可以一次贴入多个链接。</p>
+              <p data-file-text data-i18n="downloaderFormats">可以保留视频的最佳画质，也可以选 MP4。如果只想听声音，就选 MP3，程序会把音轨单独存下来。</p>
+              <p data-file-text data-i18n="downloaderInstall">下载并运行 Windows 64 位安装包即可。安装包已带上下载和转码所需的组件。</p>
+            </div>
+          </div>
+          <footer class="file-actions">
+            <a class="file-action" href="#projects/tools" data-file-text data-i18n="backToTools">返回工具</a>
+            <div class="file-download-group">
+              <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/releases/download/web-video-downloader-v1.1.0/web-video-downloader-1.1.0-x64.exe" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
             </div>
           </footer>
         </article>
@@ -150,7 +189,7 @@
       </div>
     </div>
     <div class="index">
-      <div class="list" aria-label="项目分类" data-i18n-label="categories" id="zoea-list"><button type="button" data-category="works" aria-pressed="true" data-i18n="works">作品</button><button type="button" data-category="plugins" aria-pressed="false" data-i18n="plugins">插件</button><button type="button" data-category="mod" aria-pressed="false">MOD</button></div>
+      <div class="list" aria-label="项目分类" data-i18n-label="categories" id="zoea-list"><button type="button" data-category="works" aria-pressed="true" data-i18n="works">作品</button><button type="button" data-category="tools" aria-pressed="false" data-i18n="tools">工具</button></div>
     </div>
   </main>
   <dialog id="zoea-qq" class="qq-dialog" aria-label="QQ 联系二维码" data-i18n-label="qqCode">

@@ -6,7 +6,7 @@
   const archive = document.getElementById('zoea-archive');
   const geometry = window.crtGeometry;
   const fileTiles = new Map([...archive.querySelectorAll('.file-tile')].map(tile=>[tile.hash.slice(1),tile]));
-  const projectRoutes = new Set(['projects','projects/works','projects/plugins','projects/mod',...fileTiles.keys()]);
+  const projectRoutes = new Set(['projects','projects/works','projects/tools',...fileTiles.keys()]);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const ctx = background.getContext('2d');
   const flowCtx = streamLayer.getContext('2d');
@@ -272,10 +272,17 @@
     else powerCycle(changeAndFocus,Boolean(previous));
   }
 
+  const legacyRoutes = new Map([
+    ['projects/plugins','projects/tools'],
+    ['projects/mod','projects/tools'],
+    ['projects/plugins/demo','projects/tools/film-scan-helper'],
+    ['projects/plugins/film-scan-helper','projects/tools/film-scan-helper'],
+    ['projects/mod/gwent-finder','projects/tools/gwent-finder']
+  ]);
   function syncView() {
     let path = location.hash.slice(1);
-    if (path==='projects/plugins/demo') {
-      path = 'projects/plugins/film-scan-helper';
+    if (legacyRoutes.has(path)) {
+      path = legacyRoutes.get(path);
       history.replaceState(history.state,'','#'+path);
     }
     switchView(projectRoutes.has(path) || path==='about' ? path : 'home');

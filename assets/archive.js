@@ -24,7 +24,8 @@
   } catch {
     // Keep the unlock in memory if session storage is unavailable.
   }
-  const fileGrids = [...root.querySelectorAll('.file-grid')];
+  const toolDirectory = find('.tool-directory');
+  const disclosures = [...toolDirectory.querySelectorAll('.tool-disclosure')];
   const fileTiles = [...root.querySelectorAll('.file-tile')];
   const fileDetails = new Map([...root.querySelectorAll('.file-properties')]
     .map(detail=>[detail.dataset.fileId ?? 'film-scan-helper',detail]));
@@ -36,7 +37,7 @@
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
-  const controlSelector = 'header a, header button, .list button, .about-contact, .file-tile, .file-action, .works-lock input, .works-lock button';
+  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .works-lock input, .works-lock button';
   const controls = [...root.querySelectorAll(controlSelector)];
   const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
@@ -291,7 +292,7 @@
           labelsCtx.fillText(line.text,line.left,line.middle);
         }
       }
-      if (lines.length && (active || highlighted) && label.matches('nav button, .list button')) {
+      if (lines.length && (active || highlighted) && label.matches('nav button, .list button, .tool-disclosure, .file-source')) {
         labelsCtx.fillRect(left,bottom-2,boxWidth,highlighted ? 1.5 : 1);
       }
       labelsCtx.shadowBlur = 0;
@@ -479,6 +480,35 @@
     target.globalAlpha = 1;
   }
 
+  function paintDownloaderIcon(artwork) {
+    titleCtx.strokeRect(5,10,58,47);
+    titleCtx.beginPath();
+    titleCtx.moveTo(5,20);
+    titleCtx.lineTo(63,20);
+    titleCtx.moveTo(34,25);
+    titleCtx.lineTo(34,43);
+    titleCtx.moveTo(25,35);
+    titleCtx.lineTo(34,44);
+    titleCtx.lineTo(43,35);
+    titleCtx.moveTo(20,44);
+    titleCtx.lineTo(20,50);
+    titleCtx.lineTo(48,50);
+    titleCtx.lineTo(48,44);
+    titleCtx.stroke();
+    for (const x of [10,15,20]) titleCtx.fillRect(x,14,2,2);
+    if (artwork) {
+      titleCtx.lineWidth = .7;
+      titleCtx.strokeRect(25,13,32,4);
+      titleCtx.strokeRect(8,23,52,31);
+      titleCtx.globalAlpha = .36;
+      for (let y=27;y<48;y+=3) {
+        titleCtx.fillRect(12,y,5,0.8);
+        titleCtx.fillRect(51,y,5,0.8);
+      }
+      titleCtx.globalAlpha = 1;
+    }
+  }
+
   function paintFileIcon(icon,width,density) {
     const size = Math.max(1,Math.ceil(width*density));
     if (icon.width===size && paintedIcons.has(icon)) return;
@@ -491,7 +521,8 @@
     titleCtx.lineWidth = 2;
     const gwent = icon.dataset.icon==='gwent';
     const artwork = icon.classList.contains('file-art');
-    if (artwork) {
+    if (icon.dataset.icon==='downloader') paintDownloaderIcon(artwork);
+    else if (artwork) {
       if (gwent) paintGwentArtwork();
       else paintFilmArtwork();
     } else if (gwent) paintGwentIcon();
@@ -619,8 +650,12 @@
       worksError = null;
     }
     updateWorksStatus();
-    for (const grid of fileGrids) {
-      grid.hidden = about || locked || Boolean(file) || (grid.dataset.fileCategory ?? 'plugins')!==categoryId;
+    toolDirectory.hidden = about || Boolean(file) || categoryId!=='tools';
+    for (const button of disclosures) {
+      const expanded = button.getAttribute('aria-expanded')==='true';
+      const groupName = button.dataset.group==='mod' ? 'MOD' : text('programs','程序');
+      button.textContent = (expanded ? '▾ ' : '▸ ')+groupName;
+      document.getElementById(button.getAttribute('aria-controls')).hidden = !expanded;
     }
     for (const detail of fileDetails.values()) detail.hidden = detail!==file;
     canvas.setAttribute('aria-label',label);
@@ -795,11 +830,22 @@
     current = event.detail==='about' ? 'about' : 'project';
     if (category) selected = [...list.children].findIndex(button=>button.dataset.category===category);
     openFile = fileDetails.get(fileId) ?? null;
+    if (openFile && category==='tools') {
+      const tile = fileTiles.find(link=>link.hash==='#'+event.detail);
+      const group = tile?.closest('.file-grid');
+      disclosures.find(button=>button.getAttribute('aria-controls')===group?.id)?.setAttribute('aria-expanded','true');
+    }
     if (previousFile!==openFile) window.scrollTo(0,0);
     updateContent();
     const changed = previous!==current || previousCategory!==selected || previousFile!==openFile;
     if (changed && root.crtEntryTime?.(performance.now()) < 0) refreshPanel();
   });
+  for (const button of disclosures) {
+    button.addEventListener('click',()=>{
+      button.setAttribute('aria-expanded',String(button.getAttribute('aria-expanded')!=='true'));
+      updateContent();
+    });
+  }
   document.addEventListener('zoea-language-change',updateContent);
   root.querySelectorAll('[data-page]').forEach(button=>{
     button.addEventListener('click',()=>{location.hash=button.dataset.page==='about' ? 'about' : 'projects';});
