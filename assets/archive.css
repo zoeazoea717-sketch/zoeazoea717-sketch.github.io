@@ -28,7 +28,8 @@
   #zoea-archive .intro { display:grid; grid-template-columns:minmax(0,1fr); justify-items:start; gap:9px; }
   #zoea-archive .crt-panel {
     position:relative;
-    min-height:0; padding:clamp(12px,2vw,22px);
+    --panel-padding:clamp(12px,2vw,22px);
+    min-height:0; padding:var(--panel-padding);
     grid-column:1; grid-row:1;
     border:1px solid transparent;
   }
@@ -112,23 +113,29 @@
   }
   #zoea-archive.crt-ready.crt-live-ready .works-lock-symbol { visibility:hidden; }
   #zoea-archive.crt-ready.crt-live-ready .works-lock input:focus-visible { outline:none; }
-  #zoea-archive .tool-directory { width:100%; margin-top:clamp(8px,1.8vw,22px); }
+  #zoea-archive .tool-directory {
+    container:tool-directory / inline-size;
+    justify-self:stretch; min-width:0; margin-top:clamp(8px,1.8vw,22px);
+    /* Match the graticule's 18px inset, including the panel and section borders. */
+    margin-inline:calc(16px - var(--panel-padding));
+  }
   #zoea-archive .tool-directory section { border:1px solid #d28e5270; }
-  #zoea-archive .tool-directory section + section { margin-top:clamp(10px,1.4vh,18px); }
-  #zoea-archive .tool-directory h2 { margin:0; font-size:calc(2 * var(--archive-menu-size,1.15em)); }
+  #zoea-archive .tool-directory section + section { margin-top:clamp(6px,.84vh,10.8px); }
+  #zoea-archive .tool-directory h2 { margin:0; font-size:calc(1.2 * var(--archive-menu-size,1.15em)); }
   #zoea-archive .tool-disclosure {
-    display:block; width:100%; min-height:88px; padding:0 clamp(11px,2vw,20px);
+    display:block; width:100%; min-height:52.8px; padding:0 clamp(6.6px,1.2vw,12px);
     cursor:pointer; text-align:left; background:#d28e521e;
   }
   #zoea-archive .tool-directory .file-grid {
-    margin-top:0; padding:clamp(8px,1.4vw,18px); border-top:1px solid #d28e5270;
+    margin-top:0; padding-block:clamp(5px,.84vw,11px); border-top:1px solid #d28e5270;
   }
   #zoea-archive.crt-live-ready .tool-directory :is(section,.file-grid) { border-color:transparent; }
   #zoea-archive.crt-live-ready .tool-disclosure { background:transparent; outline:none; }
   #zoea-archive .file-grid {
     display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:clamp(8px,2vw,24px);
+    grid-template-columns:repeat(var(--file-columns,1),minmax(0,1fr));
+    grid-auto-rows:1fr; justify-items:center;
+    row-gap:clamp(8px,2vw,24px);
     width:100%;
     margin-top:clamp(8px,1.8vw,22px);
   }
@@ -137,8 +144,10 @@
     width:min(100%,calc(146px * var(--tile-scale)));
     min-height:calc(116px * var(--tile-scale));
     display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:calc(68px * var(--tile-scale)) auto;
     justify-items:center;
-    align-content:center;
+    align-content:start;
     gap:calc(8px * var(--tile-scale));
     padding:calc(8px * var(--tile-scale)) calc(5px * var(--tile-scale));
     border:1px solid transparent;
@@ -146,6 +155,7 @@
     cursor:pointer;
   }
   #zoea-archive .file-name {
+    max-width:100%; overflow-wrap:anywhere;
     font-size:calc(clamp(14px,1.55vw,16px) * max(var(--crt-text-scale),var(--tile-scale)));
     font-weight:700;
   }
@@ -334,7 +344,15 @@
     #zoea-archive .index { column-gap:8px; font-size:calc(13px * var(--crt-text-scale)); }
     #zoea-archive .list { gap:9px; }
     #zoea-archive nav button { padding-inline:5px; }
-    #zoea-archive .file-grid { grid-template-columns:repeat(auto-fill,minmax(min(100%,112px),1fr)); }
+  }
+  @container tool-directory (min-width:240px) {
+    #zoea-archive .file-grid { --file-columns:2; }
+  }
+  @container tool-directory (min-width:520px) {
+    #zoea-archive .file-grid { --file-columns:4; }
+  }
+  @container tool-directory (min-width:1080px) {
+    #zoea-archive .file-grid { --file-columns:8; }
   }
   @media(max-width:420px) {
     #zoea-archive .file-summary dl { grid-template-columns:minmax(0,1fr); gap:2px; }
