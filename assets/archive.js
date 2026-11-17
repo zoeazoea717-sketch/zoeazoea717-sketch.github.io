@@ -198,6 +198,9 @@
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
+      groups:toolDirectory.hidden ? [] : disclosures.map(button=>({
+        button,box:measureBox(button.closest('section')),bar:measureBox(button.parentElement)
+      })),
       properties:file ? {
         box:measureBox(file),bar:measureBox(file.querySelector('.file-bar')),
         footer:measureBox(file.querySelector('.file-actions')),
@@ -217,7 +220,7 @@
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,soundIcon,contactIcon,tiles,properties,files,actions,lock} = labelLayout ?? measureLabels();
+    const {layout,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -225,6 +228,19 @@
       function outline({left,top,width,height},alpha) {
         labelsCtx.globalAlpha = alpha;
         labelsCtx.strokeRect(left,top,width,height);
+      }
+      function drawWindow(box,bar,hasBody,lit) {
+        outline(box,lit ? .65 : .42);
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.globalAlpha = lit ? .18 : .10;
+        labelsCtx.fillRect(bar.left,bar.top,bar.width,bar.height);
+        if (hasBody) {
+          labelsCtx.globalAlpha = lit ? .65 : .40;
+          labelsCtx.fillRect(box.left,bar.top+bar.height-.5,box.width,1);
+        }
+      }
+      for (const {button,box,bar} of groups) {
+        drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
       }
       for (const {tile,...box} of tiles) {
         if (highlighted(tile)) outline(box,.36);
@@ -244,14 +260,9 @@
       }
       if (properties) {
         const {box,bar,footer,divider} = properties;
-        outline(box,.42);
-        labelsCtx.fillStyle = '#fff';
-        labelsCtx.globalAlpha = .10;
-        labelsCtx.fillRect(box.left,box.top,box.width,bar.top+bar.height-box.top);
+        drawWindow(box,bar,true,false);
         labelsCtx.globalAlpha = .40;
-        for (const y of [bar.top+bar.height,footer.top]) {
-          labelsCtx.fillRect(box.left,y-.5,box.width,1);
-        }
+        labelsCtx.fillRect(box.left,footer.top-.5,box.width,1);
         if (divider) {
           labelsCtx.globalAlpha = .36;
           labelsCtx.fillRect(divider.left,divider.top,divider.width,divider.height);
@@ -292,7 +303,7 @@
           labelsCtx.fillText(line.text,line.left,line.middle);
         }
       }
-      if (lines.length && (active || highlighted) && label.matches('nav button, .list button, .tool-disclosure, .file-source')) {
+      if (lines.length && (active || highlighted) && label.matches('nav button, .list button, .file-source')) {
         labelsCtx.fillRect(left,bottom-2,boxWidth,highlighted ? 1.5 : 1);
       }
       labelsCtx.shadowBlur = 0;
