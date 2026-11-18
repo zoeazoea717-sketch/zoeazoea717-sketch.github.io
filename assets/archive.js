@@ -826,95 +826,85 @@
   }
   qqSource.addEventListener('load',initializeQqDisplay);
 
-  let qqClosing;
-  let qqPointerFrame = 0;
-  function setQqPerspective(x,y) {
-    const tilt = geometry.tilt;
-    qqGlass.style.setProperty('--qq-tilt-x',`${-y*4.2*tilt}deg`);
-    qqGlass.style.setProperty('--qq-tilt-y',`${x*5.1*tilt}deg`);
-    qqGlass.style.setProperty('--qq-light-x',`${50+x*39}%`);
-    qqGlass.style.setProperty('--qq-light-y',`${50+y*39}%`);
-  }
-  function resetQqPerspective() {
-    cancelAnimationFrame(qqPointerFrame);
-    qqPointerFrame = 0;
-    setQqPerspective(0,0);
-  }
-  qqDialog.addEventListener('pointermove',event=>{
-    if (!qqDialog.open || qqClosing || reduced.matches || event.pointerType==='touch') return;
-    cancelAnimationFrame(qqPointerFrame);
-    const {clientX,clientY} = event;
-    qqPointerFrame = requestAnimationFrame(()=>{
-      qqPointerFrame = 0;
-      // The dialog box stays flat, so its coordinates are stable as its contents tilt.
-      const box = qqDialog.getBoundingClientRect();
-      const x = 2*limit((clientX-box.left)/box.width)-1;
-      const y = 2*limit((clientY-box.top)/box.height)-1;
-      setQqPerspective(x,y);
-    });
-  },{passive:true});
-  qqDialog.addEventListener('pointerleave',resetQqPerspective);
-  reduced.addEventListener('change',resetQqPerspective);
-  geometry.compactTouch.addEventListener('change',resetQqPerspective);
-
-  function resetQqAnimation() {
-    qqClosing?.cancel();
-    qqClosing = null;
-    resetQqPerspective();
-  }
-  function playDialogCue(open) {
-    root.dispatchEvent(new CustomEvent('crt-dialog-toggle',{bubbles:true,detail:open}));
-  }
-  function closeQq(event) {
-    event.preventDefault();
-    if (!qqDialog.open || qqClosing) return;
-    cancelAnimationFrame(qqPointerFrame);
-    playDialogCue(false);
-    if (reduced.matches) {
-      qqDialog.close();
-      return;
+  function bindPreview(dialog, surface, openers, tiltScale, afterOpen) {
+    let closing;
+    let pointerFrame = 0;
+    function setTilt(x,y) {
+      const gain = geometry.tilt*tiltScale;
+      surface.style.setProperty('--dialog-tilt-x',`${-y*4.2*gain}deg`);
+      surface.style.setProperty('--dialog-tilt-y',`${x*5.1*gain}deg`);
+      if (dialog===qqDialog) {
+        surface.style.setProperty('--qq-light-x',`${50+x*39}%`);
+        surface.style.setProperty('--qq-light-y',`${50+y*39}%`);
+      }
     }
-    qqClosing = qqGlass.animate([
-      {clipPath:getComputedStyle(qqGlass).clipPath,filter:'brightness(1)',opacity:1},
-      {clipPath:'inset(49.3% 0)',filter:'brightness(2.3)',opacity:1,offset:.68},
-      {clipPath:'inset(49.9% 46%)',filter:'brightness(2.5)',opacity:0}
-    ],{duration:155,easing:'ease-in',fill:'forwards'});
-    qqClosing.finished.then(()=>qqDialog.close(),()=>{});
-  }
-  qqButton.addEventListener('click',()=>{
-    if (qqDialog.open) return;
-    resetQqAnimation();
-    qqDialog.showModal();
-    initializeQqDisplay();
-    playDialogCue(true);
-  });
-  qqDialog.addEventListener('submit',closeQq);
-  qqDialog.addEventListener('cancel',closeQq);
-  qqDialog.addEventListener('close',()=>{
-    if (!qqDialog.open) resetQqAnimation();
-  });
-  qqDialog.addEventListener('click',event=>{
-    if (event.target===qqDialog) closeQq(event);
-  });
+    function resetTilt() {
+      cancelAnimationFrame(pointerFrame);
+      setTilt(0,0);
+    }
+    function reset() {
+      closing?.cancel();
+      closing = null;
+      resetTilt();
+    }
+    function cue(open) {
+      root.dispatchEvent(new CustomEvent('crt-dialog-toggle',{bubbles:true,detail:open}));
+    }
+    dialog.addEventListener('pointermove',event=>{
+      if (closing || reduced.matches || event.pointerType==='touch') return;
+      cancelAnimationFrame(pointerFrame);
+      const {clientX,clientY} = event;
+      pointerFrame = requestAnimationFrame(()=>{
+        // The native dialog stays flat while the single surface inside tilts.
+        const box = dialog.getBoundingClientRect();
+        setTilt(2*limit((clientX-box.left)/box.width)-1,2*limit((clientY-box.top)/box.height)-1);
+      });
+    },{passive:true});
+    dialog.addEventListener('pointerleave',resetTilt);
+    reduced.addEventListener('change',resetTilt);
+    geometry.compactTouch.addEventListener('change',resetTilt);
 
-  for (const thumb of filmExample.querySelectorAll('.film-thumb')) {
-    thumb.addEventListener('click',()=>{
-      filmViewer.showModal();
-      filmViewer.scrollTop = 0;
-      playDialogCue(true);
+    function dismiss(event) {
+      event.preventDefault();
+      if (!dialog.open || closing) return;
+      cancelAnimationFrame(pointerFrame);
+      cue(false);
+      if (reduced.matches) {
+        dialog.close();
+        return;
+      }
+      closing = surface.animate([
+        {clipPath:getComputedStyle(surface).clipPath,filter:'brightness(1)',opacity:1},
+        {clipPath:'inset(49.3% 0)',filter:'brightness(2.3)',opacity:1,offset:.68},
+        {clipPath:'inset(49.9% 46%)',filter:'brightness(2.5)',opacity:0}
+      ],{duration:155,easing:'ease-in',fill:'forwards'});
+      closing.finished.then(()=>dialog.close(),()=>{});
+    }
+    for (const opener of openers) {
+      opener.addEventListener('click',()=>{
+        if (dialog.open) return;
+        reset();
+        dialog.showModal();
+        surface.scrollTop = 0;
+        afterOpen?.();
+        cue(true);
+      });
+    }
+    dialog.addEventListener('submit',dismiss);
+    dialog.addEventListener('cancel',dismiss);
+    dialog.addEventListener('click',event=>{
+      if (event.target===dialog) dismiss(event);
+    });
+    dialog.addEventListener('close',()=>{
+      if (!dialog.open) reset();
     });
   }
-  filmViewer.addEventListener('close',()=>playDialogCue(false));
-  filmViewer.addEventListener('click',event=>{
-    if (event.target!==filmViewer) return;
-    const box = filmViewer.getBoundingClientRect();
-    if (event.clientX<box.left || event.clientX>=box.right || event.clientY<box.top || event.clientY>=box.bottom) filmViewer.close();
-  });
+  bindPreview(qqDialog,qqGlass,[qqButton],1,initializeQqDisplay);
+  bindPreview(filmViewer,filmViewer.querySelector('.film-glass'),filmExample.querySelectorAll('.film-thumb'),.56);
 
   root.addEventListener('crt-view',event=>{
     if (filmViewer.open && event.detail!=='projects/tools/film-scan-helper') filmViewer.close();
     if (event.detail!=='about' && qqDialog.open) {
-      resetQqAnimation();
       qqDialog.close();
     }
     if (event.detail==='home') return;

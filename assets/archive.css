@@ -235,11 +235,11 @@
   #zoea-archive .film-pair figure { display:grid; align-content:start; gap:.3em; margin:0; }
   #zoea-archive .film-thumb {
     position:relative; display:block; width:100%; aspect-ratio:3/2; overflow:hidden;
-    background:#18120f; border:1px solid #b88050; cursor:zoom-in;
+    isolation:isolate; background:#ffbc79; border:1px solid #b88050; cursor:zoom-in;
   }
   #zoea-archive .film-thumb img {
     position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain;
-    filter:sepia(.57) saturate(1.25) brightness(.86);
+    background:#17120e; mix-blend-mode:multiply;
   }
   #zoea-archive .film-thumb::after {
     content:""; position:absolute; inset:0; pointer-events:none;
@@ -257,11 +257,25 @@
     #zoea-archive .film-pair { grid-template-columns:1fr; }
   }
   #film-viewer {
-    box-sizing:border-box; width:min(96vw,1700px); max-width:calc(100% - 12px);
-    max-height:92dvh; padding:0; overflow:auto; overscroll-behavior:contain;
-    background:#141414; color:#f3d4aa; border:1px solid #ac784b;
+    box-sizing:border-box; width:min(92vw,1700px); max-width:calc(100% - 16px);
+    max-height:none; padding:0; overflow:visible; border:0; background:transparent; color:#ffdbab;
   }
   #film-viewer::backdrop { background:#0a0908df; }
+  #film-viewer .film-glass {
+    --rest-x:.9deg; --rest-y:-2.4deg;
+    max-height:88dvh; overflow:auto; overscroll-behavior:contain;
+    background:#141414; border:1px solid #d2955b; box-shadow:0 0 9px #e4a05d36;
+    transform:perspective(max(900px,110vw)) rotateX(calc(var(--rest-x) + var(--dialog-tilt-x,0deg))) rotateY(calc(var(--rest-y) + var(--dialog-tilt-y,0deg)));
+  }
+  @media (prefers-reduced-motion:no-preference) {
+    #film-viewer[open] .film-glass {
+      animation:crt-expose 260ms ease-out; transition:transform 135ms ease-out;
+    }
+  }
+  @media (max-width:640px), (pointer:coarse) {
+    #film-viewer { width:95vw; }
+    #film-viewer .film-glass { --rest-x:.35deg; --rest-y:-.65deg; }
+  }
   #film-viewer .film-viewer-bar {
     position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between;
     gap:.8em; padding:0 clamp(10px,1.4vw,22px); border-bottom:1px solid #916641;
@@ -365,8 +379,8 @@
   #zoea-archive .qq-code > .crt-live { position:absolute; inset:0; pointer-events:none; }
   @media (prefers-reduced-motion:no-preference) {
     #zoea-archive .qq-dialog[open] .qq-glass {
-      animation:qq-expose 260ms ease-out both;
-      transform:perspective(760px) rotateX(var(--qq-tilt-x,0deg)) rotateY(var(--qq-tilt-y,0deg));
+      animation:crt-expose 260ms ease-out both;
+      transform:perspective(760px) rotateX(var(--dialog-tilt-x,0deg)) rotateY(var(--dialog-tilt-y,0deg));
       transition:transform 135ms ease-out;
     }
     #zoea-archive .qq-dialog[open] .qq-code { animation:qq-write 160ms 65ms linear both; }
@@ -377,7 +391,7 @@
       animation:qq-sweep 190ms 60ms linear both;
     }
   }
-  @keyframes qq-expose {
+  @keyframes crt-expose {
     0% { clip-path:inset(49.8% 42%); filter:brightness(2.5); opacity:.2; }
     22% { clip-path:inset(49% 0); filter:brightness(2.1); opacity:1; }
     72% { clip-path:inset(0); }
