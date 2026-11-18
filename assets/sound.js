@@ -9,6 +9,9 @@
   let muted = false;
   let playing;
   let currentView;
+  let navigationKey = '';
+  let keyReset;
+  let lastCueAt = -Infinity;
 
   try {
     muted = localStorage.getItem(preference) === 'true';
@@ -41,6 +44,7 @@
     playing = sounds.get(name);
     playing.currentTime = 0;
     playing.play().catch(()=>{});
+    lastCueAt = performance.now();
   }
 
   function refreshIcon() {
@@ -63,7 +67,7 @@
   icon.addEventListener('load',refreshIcon);
   icon.src = './assets/sound-icon.svg';
 
-  const interactionSounds = ['enter','select','return','qq-open','qq-close'];
+  const interactionSounds = ['enter','select','return','qq-open','qq-close','focus','expand','collapse','granted','denied'];
   for (const button of muteButtons) {
     button.addEventListener('click',()=>{
       muted = !muted;
@@ -80,16 +84,39 @@
   }
 
   function playControlCue(event) {
-    if (muted || event.defaultPrevented || !event.isTrusted || screen.inert) return;
+    if (muted || event.defaultPrevented || screen.inert || (!event.isTrusted && !navigationKey)) return;
     const control = event.target.closest('button:not(:disabled),a[href]');
-    if (!control || control.matches('.crt-mute,.about-contact,#zoea-qq button')) return;
+    if (!control || control.matches('.crt-mute,.about-contact,#zoea-qq button,.works-lock [type="submit"]')) return;
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
-    if (control.matches('.file-tile,.file-action[href^="#projects/"]')) return;
+    if (control.matches('.file-tile,.file-action[href^="#projects/"]')) {
+      // Opening another tab leaves this tab's route unchanged.
+      if (event.button===1 || event.ctrlKey || event.metaKey || event.shiftKey) play('qq-open');
+      return;
+    }
     if (fileViews.has(currentView) && control.matches('[data-page],[data-category]')) return;
     if (control.matches('.terminal')) play('enter');
     else if (control.matches('.wordmark')) play('return');
+    else if (control.matches('.tool-disclosure')) play(control.getAttribute('aria-expanded')==='true' ? 'collapse' : 'expand');
     else play('select');
   }
+  const focusKeys = new Set(['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End']);
+  window.addEventListener('keydown',event=>{
+    if (!event.isTrusted || event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (!focusKeys.has(event.key) && !['Enter',' ','Escape'].includes(event.key)) return;
+    navigationKey = event.key;
+    clearTimeout(keyReset);
+    keyReset = setTimeout(()=>{navigationKey='';},0);
+  },{capture:true});
+
+  screen.addEventListener('focusin',()=>{
+    if (!muted && focusKeys.has(navigationKey) && performance.now()-lastCueAt>=100) play('focus');
+  });
+  document.addEventListener('zoea-access-result',event=>{
+    if (!muted) play(event.detail.ok ? 'granted' : 'denied');
+  });
+  archive.addEventListener('invalid',event=>{
+    if (!muted && event.target.matches('#zoea-works-password')) play('denied');
+  },{capture:true});
   screen.addEventListener('click',playControlCue,{capture:true});
   screen.addEventListener('auxclick',playControlCue,{capture:true});
   archive.addEventListener('crt-view',event=>{

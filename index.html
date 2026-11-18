@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#100905">
   <title>ZOEA</title>
-  <link rel="stylesheet" href="./assets/site.css?v=works-access">
+  <link rel="stylesheet" href="./assets/site.css?v=works-keyboard">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
-  <link rel="stylesheet" href="./assets/archive.css?v=aligned-tool-grid">
-  <script defer src="./assets/language.js?v=tools-directory"></script>
+  <link rel="stylesheet" href="./assets/archive.css?v=works-keyboard">
+  <script defer src="./assets/language.js?v=works-keyboard"></script>
   <script defer src="./assets/motion.js?v=works-access"></script>
-  <script defer src="./assets/shell.js?v=tools-directory"></script>
+  <script defer src="./assets/shell.js?v=works-keyboard"></script>
   <script defer src="./assets/terrain.js"></script>
-  <script defer src="./assets/sound.js?v=file-navigation"></script>
+  <script defer src="./assets/sound.js?v=works-keyboard"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=tool-windows"></script>
+  <script defer src="./assets/archive.js?v=works-keyboard"></script>
+  <script defer src="./assets/keyboard.js?v=works-keyboard"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -51,20 +52,39 @@
       <div class="intro">
         <p class="prompt" id="zoea-directory">C:\ZOEA\PROJECTS&gt;</p>
         <h1 id="zoea-heading" tabindex="-1">作品</h1>
-        <form class="works-lock" aria-labelledby="zoea-works-lock-title" hidden>
-          <div class="works-lock-title">
-            <span class="works-lock-symbol" aria-hidden="true"></span>
-            <h2 id="zoea-works-lock-title" data-works-text data-i18n="worksLocked">作品页已锁定</h2>
-          </div>
-          <label for="zoea-works-password" data-works-text data-i18n="worksPassword">访问密码</label>
-          <div class="works-lock-fields">
-            <input id="zoea-works-password" type="password" aria-describedby="zoea-works-access-hint zoea-works-access-status" autocomplete="off" maxlength="128" required>
-            <button type="submit" data-works-text data-i18n="worksUnlock">解锁</button>
-          </div>
-          <p id="zoea-works-access-hint" data-works-text data-i18n="worksAccessHint">请向作者申请作品页访问权限</p>
-          <p id="zoea-works-access-status" data-works-text role="status" hidden></p>
-        </form>
-        <p class="works-unlocked" data-works-text data-i18n="worksUnlocked" hidden>作品页已解锁</p>
+        <div class="tool-directory works-directory" hidden>
+          <section aria-labelledby="public-works-title">
+            <h2 class="public-works-bar" id="public-works-title" data-file-text data-i18n="publicWorks">公开作品</h2>
+            <p class="directory-note" data-file-text data-i18n="publicEmpty">暂时还没有公开的作品。</p>
+          </section>
+          <section>
+            <h2><button type="button" class="tool-disclosure" data-group="hiring" aria-expanded="false" aria-controls="hiring-content" data-file-text>▸ 求职资料</button></h2>
+            <div id="hiring-content" hidden>
+              <form class="works-lock" aria-labelledby="zoea-works-lock-title" novalidate hidden>
+                <div class="works-lock-title">
+                  <span class="works-lock-symbol" aria-hidden="true"></span>
+                  <h3 id="zoea-works-lock-title" data-works-text data-i18n="worksLocked">个人简历与求职作品集</h3>
+                </div>
+                <label for="zoea-works-password" data-works-text data-i18n="worksPassword">访问密码</label>
+                <div class="works-lock-fields">
+                  <input id="zoea-works-password" type="password" aria-describedby="zoea-works-access-hint zoea-works-access-status" autocomplete="off" maxlength="128" required>
+                  <button type="submit" data-works-text data-i18n="worksUnlock">解锁</button>
+                </div>
+                <p id="zoea-works-access-hint" data-works-text data-i18n="worksAccessHint">请向作者申请作品页访问权限</p>
+                <a class="file-source" href="#about" data-file-text data-i18n="contactAuthor">联系作者 →</a>
+                <div class="access-error" hidden>
+                  <h3 class="file-bar" data-works-text data-i18n="accessNotice">访问提示</h3>
+                  <p id="zoea-works-access-status" role="alert" data-works-text></p>
+                  <button type="button" class="retry-access" data-works-text data-i18n="accessRetry">重新输入</button>
+                </div>
+              </form>
+              <div class="works-unlocked" hidden>
+                <section><h3 data-works-text data-i18n="resume">个人简历</h3><p data-works-text data-i18n="resumeEmpty">简历待上传。</p></section>
+                <section><h3 data-works-text data-i18n="hiringPortfolio">求职作品集</h3><p data-works-text data-i18n="portfolioEmpty">作品集待上传。</p></section>
+              </div>
+            </div>
+          </section>
+        </div>
         <div class="tool-directory" hidden>
           <section>
             <h2><button type="button" class="tool-disclosure" data-group="mod" aria-expanded="true" aria-controls="files-mod" data-file-text>▾ MOD</button></h2>
@@ -89,8 +109,8 @@
             </div>
           </section>
         </div>
-        <article class="file-properties" data-file-id="film-scan-helper" aria-labelledby="zoea-heading" hidden>
-          <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
+        <article class="file-properties" data-file-id="film-scan-helper" aria-labelledby="film-plugin-title" hidden>
+          <h2 id="film-plugin-title" class="file-bar" data-file-text data-i18n="filmScanHelper">胶片翻拍助手</h2>
           <div class="file-body">
             <div class="file-summary">
               <dl>
@@ -104,6 +124,19 @@
             <div class="file-description">
               <h3 data-file-text data-i18n="fileDescription">介绍</h3>
               <p data-file-text data-i18n="filmScanIntro">这是我给用数码相机和片夹翻拍 135 黑白负片做的 Photoshop 插件。选中一卷照片的文件夹，它就能批量调平、裁掉片夹边缘、把负片转正，并设定黑白场。</p>
+              <section class="film-example" aria-labelledby="film-example-title">
+                <h3 id="film-example-title" data-file-text data-i18n="filmExample">实拍对照 · v2.2</h3>
+                <div class="film-pair">
+                  <figure>
+                    <img class="film-print" src="./assets/film-negative-proof.svg" width="168" height="112" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
+                    <figcaption data-file-text data-i18n="filmBefore">翻拍负片</figcaption>
+                  </figure>
+                  <figure>
+                    <img class="film-print" src="./assets/film-positive-proof.svg" width="168" height="112" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
+                    <figcaption data-file-text data-i18n="filmAfter">自动输出</figcaption>
+                  </figure>
+                </div>
+              </section>
               <p data-file-text data-i18n="filmScanOutput">支持 RAW 和 JPEG，可导出成品 JPEG，也可以保留可继续编辑的分层 PSD。想保留胶片的样子，还可以加胶片边框、生成整卷预览。个别照片识别不准，也能单张修正。</p>
               <p data-file-text data-i18n="filmScanFeedback">目前还在测试，有些地方可能不够完善。遇到 Bug 或有改进建议，欢迎从首页的平台私信告诉我。</p>
             </div>
@@ -191,6 +224,7 @@
     </div>
     <div class="index">
       <div class="list" aria-label="项目分类" data-i18n-label="categories" id="zoea-list"><button type="button" data-category="works" aria-pressed="true" data-i18n="works">作品</button><button type="button" data-category="tools" aria-pressed="false" data-i18n="tools">工具</button></div>
+      <span class="key-guide" data-file-text data-i18n="keyGuide" hidden>Tab / 方向键 选择 · Enter 打开 · Esc 返回</span>
     </div>
   </main>
   <dialog id="zoea-qq" class="qq-dialog" aria-label="QQ 联系二维码" data-i18n-label="qqCode">

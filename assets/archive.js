@@ -15,6 +15,10 @@
   const worksPassword = find('#zoea-works-password');
   const worksSubmit = worksLock.querySelector('button');
   const worksStatus = find('#zoea-works-access-status');
+  const errorWindow = find('.access-error');
+  const retryButton = find('.retry-access');
+  const worksDirectory = find('.works-directory');
+  const hiringToggle = find('[data-group="hiring"]');
   const worksToken = '23fd7c32ae6aa3c05b72677ecb055e26e95d8d2e002462bbbbe9ce7346ee107d';
   const worksSessionKey = 'zoea.works.access';
   let worksUnlocked = false, checkingPassword = false;
@@ -24,13 +28,20 @@
   } catch {
     // Keep the unlock in memory if session storage is unavailable.
   }
-  const toolDirectory = find('.tool-directory');
-  const disclosures = [...toolDirectory.querySelectorAll('.tool-disclosure')];
+  const toolDirectory = find('.tool-directory:not(.works-directory)');
+  const disclosures = [...root.querySelectorAll('.tool-disclosure')];
   const fileTiles = [...root.querySelectorAll('.file-tile')];
   const fileDetails = new Map([...root.querySelectorAll('.file-properties')]
     .map(detail=>[detail.dataset.fileId ?? 'film-scan-helper',detail]));
   const fileIcons = [...root.querySelectorAll('.file-icon')];
   const paintedIcons = new WeakSet();
+  const filmExample = find('.film-example');
+  const filmPrints = [...filmExample.querySelectorAll('.film-print')];
+  for (const image of filmPrints) {
+    image.addEventListener('load',()=>{
+      if (!root.hidden && image.getClientRects().length) render();
+    });
+  }
   const qqDialog = find('#zoea-qq');
   const qqButton = find('[aria-controls="zoea-qq"]');
   const qqIcon = qqButton.querySelector('img');
@@ -194,11 +205,19 @@
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
     return {layout,
+      film:file?.contains(filmExample) ? {
+        box:measureBox(filmExample),
+        prints:filmPrints.map(image=>({image,...measureBox(image)}))
+      } : null,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
-      groups:toolDirectory.hidden ? [] : disclosures.map(button=>({
+      focusBoxes:new Map(controls.filter(control=>control.getClientRects().length).map(control=>[control,measureBox(control)])),
+      staticWindows:[...root.querySelectorAll('.public-works-bar,.works-unlocked h3,.access-error h3')]
+        .filter(bar=>bar.getClientRects().length)
+        .map(bar=>({box:measureBox(bar.parentElement),bar:measureBox(bar)})),
+      groups:disclosures.filter(button=>button.getClientRects().length).map(button=>({
         button,box:measureBox(button.closest('section')),bar:measureBox(button.parentElement)
       })),
       properties:file ? {
@@ -220,7 +239,7 @@
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock} = labelLayout ?? measureLabels();
+    const {layout,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock,film,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -242,6 +261,7 @@
       for (const {button,box,bar} of groups) {
         drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
       }
+      for (const {box,bar} of staticWindows) drawWindow(box,bar,true,false);
       for (const {tile,...box} of tiles) {
         if (highlighted(tile)) outline(box,.36);
       }
@@ -274,6 +294,26 @@
       for (const {icon,tile,x,y,width,height} of files) {
         labelsCtx.globalAlpha = tile && highlighted(tile) ? 1 : .80;
         labelsCtx.drawImage(icon,x-width/2,y-height/2,width,height);
+      }
+      const focusBox = focusBoxes.get(document.activeElement);
+      if (focusBox && document.documentElement.dataset.input==='keyboard') {
+        labelsCtx.save();
+        labelsCtx.setLineDash([3,2]);
+        outline(focusBox,.94);
+        labelsCtx.restore();
+      }
+      if (film) {
+        const {box,prints} = film;
+        labelsCtx.globalAlpha = .34;
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.fillRect(box.left,box.top,box.width,1);
+        labelsCtx.fillRect(box.left,box.top+box.height-1,box.width,1);
+        for (const {image,left,top,width,height} of prints) {
+          if (!image.naturalWidth) continue;
+          labelsCtx.globalAlpha = .68;
+          labelsCtx.drawImage(image,left,top,width,height);
+          outline({left,top,width,height},.24);
+        }
       }
     }
     for (const {label,lines,fontWeight,fontSize,fontFamily,left,bottom,width:boxWidth} of layout) {
@@ -643,8 +683,7 @@
     const category = list.children[selected];
     const categoryId = category.dataset.category;
     const works = !about && categoryId==='works';
-    const locked = works && !worksUnlocked;
-    const file = locked || about ? null : openFile;
+    const file = about ? null : openFile;
     const path = categoryId.toUpperCase();
     const {text} = window.zoeaLocale;
     const label = about ? text('aboutHeading','关于 ZOEA') : file ? text('fileDetails','文件详情') : category.textContent;
@@ -654,9 +693,11 @@
     root.dataset.view = current;
     root.toggleAttribute('data-file-open',Boolean(file));
     aboutContent.hidden = !about;
-    worksLock.hidden = !locked;
-    worksReady.hidden = !works || locked || Boolean(file) || fileTiles.some(tile=>tile.hash.startsWith('#projects/works/'));
-    if (!locked) {
+    worksDirectory.hidden = !works || Boolean(file);
+    const hiringOpen = !worksDirectory.hidden && hiringToggle.getAttribute('aria-expanded')==='true';
+    worksLock.hidden = !hiringOpen || worksUnlocked;
+    worksReady.hidden = !hiringOpen || !worksUnlocked;
+    if (worksLock.hidden) {
       worksPassword.value = '';
       worksError = null;
     }
@@ -664,7 +705,8 @@
     toolDirectory.hidden = about || Boolean(file) || categoryId!=='tools';
     for (const button of disclosures) {
       const expanded = button.getAttribute('aria-expanded')==='true';
-      const groupName = button.dataset.group==='mod' ? 'MOD' : text('programs','程序');
+      const groupName = button===hiringToggle ? text('hiring','求职资料') :
+        button.dataset.group==='mod' ? 'MOD' : text('programs','程序');
       button.textContent = (expanded ? '▾ ' : '▸ ')+groupName;
       document.getElementById(button.getAttribute('aria-controls')).hidden = !expanded;
     }
@@ -680,11 +722,32 @@
 
   function updateWorksStatus() {
     const {text} = window.zoeaLocale;
-    worksStatus.hidden = !worksError;
+    errorWindow.hidden = !worksError;
     worksStatus.textContent = worksError ? text(...worksError) : '';
-    worksPassword.setAttribute('aria-invalid',String(worksError?.[0]==='worksIncorrect'));
+    worksPassword.setAttribute('aria-invalid',String(Boolean(worksError)));
   }
 
+  function showAccessError(key,description) {
+    worksError = [key,description];
+    updateWorksStatus();
+    render();
+    retryButton.focus();
+    document.dispatchEvent(new CustomEvent('zoea-access-result',{detail:{ok:false}}));
+  }
+  function retryAccess() {
+    worksError = null;
+    updateWorksStatus();
+    render();
+    worksPassword.focus();
+    worksPassword.select();
+  }
+  retryButton.addEventListener('click',retryAccess);
+  worksLock.addEventListener('keydown',event=>{
+    if (event.key==='Escape' && worksError && !event.isComposing) {
+      event.preventDefault();
+      retryAccess();
+    }
+  });
   worksPassword.addEventListener('input',()=>{
     if (!worksError) return;
     worksError = null;
@@ -694,30 +757,31 @@
   worksLock.addEventListener('submit',async event=>{
     event.preventDefault();
     if (checkingPassword || worksLock.hidden) return;
+    if (!worksPassword.value) {
+      showAccessError('worksMissing','请输入访问密码。');
+      return;
+    }
     checkingPassword = true;
     try {
       const buffer = await crypto.subtle.digest('SHA-256',new TextEncoder().encode(worksPassword.value));
       const digest = Array.from(new Uint8Array(buffer),byte=>byte.toString(16).padStart(2,'0')).join('');
+      if (worksLock.hidden) return;
       if (digest===worksToken) {
         worksUnlocked = true;
         try { sessionStorage.setItem(worksSessionKey,worksToken); } catch {}
-        if (worksLock.hidden) return;
         updateContent();
-        heading.focus({preventScroll:true});
+        hiringToggle.focus({preventScroll:true});
+        document.dispatchEvent(new CustomEvent('zoea-access-result',{detail:{ok:true}}));
         refreshPanel();
         return;
       }
-      if (worksLock.hidden) return;
-      worksError = ['worksIncorrect','密码不正确，请重试。'];
-      worksPassword.select();
+      showAccessError('worksIncorrect','密码不正确，请重试。');
     } catch {
       if (worksLock.hidden) return;
-      worksError = ['worksPasswordUnavailable','请通过 HTTPS 打开网站后再试。'];
+      showAccessError('worksPasswordUnavailable','请通过 HTTPS 打开网站后再试。');
     } finally {
       checkingPassword = false;
     }
-    updateWorksStatus();
-    render();
   });
 
   let panelAnimation;
@@ -858,6 +922,10 @@
     });
   }
   document.addEventListener('zoea-language-change',updateContent);
+  document.addEventListener('zoea-input-change',()=>{
+    find('.key-guide').hidden = document.documentElement.dataset.input!=='keyboard';
+    if (!root.hidden) render();
+  });
   root.querySelectorAll('[data-page]').forEach(button=>{
     button.addEventListener('click',()=>{location.hash=button.dataset.page==='about' ? 'about' : 'projects';});
   });

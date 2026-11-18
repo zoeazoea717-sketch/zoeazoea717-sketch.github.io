@@ -239,7 +239,7 @@
     requestedView = view;
     const previous = current;
     const active = document.activeElement;
-    const moveFocus = active?.matches(':focus-visible');
+    const moveFocus = document.documentElement.dataset.input==='keyboard' || active?.matches(':focus-visible');
     cancelTransition();
     if (view===previous) return;
     function focus() {
@@ -251,6 +251,10 @@
         previousTile && previous.slice(0,previous.lastIndexOf('/'))===view ? previousTile :
         archive.querySelector('[aria-current="page"]');
       target?.focus({preventScroll:true});
+      if (target && moveFocus) {
+        const box = target.getBoundingClientRect();
+        if (box.top<0 || box.bottom>innerHeight) target.scrollIntoView({block:'nearest'});
+      }
     }
     const change = ()=>{
       current = view;
