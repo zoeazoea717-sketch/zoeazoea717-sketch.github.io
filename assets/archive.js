@@ -371,14 +371,25 @@
     }
   }
 
+  function filmPerforations(count,pitch,width,height,top) {
+    const path = new Path2D();
+    const left = (68-(count-1)*pitch-width)/2;
+    const bottom = 68-top-height;
+    for (let i=0;i<count;i++) {
+      const x = left+i*pitch;
+      path.rect(x,top,width,height);
+      path.rect(x,bottom,width,height);
+    }
+    return path;
+  }
+  const iconPerforations = filmPerforations(6,8,4,4,16);
+  const artworkPerforations = filmPerforations(10,5.6,3.2,3,17);
+
   function paintFilmIcon() {
     titleCtx.strokeRect(5,12,58,44);
     titleCtx.strokeRect(10,24,22,20);
     titleCtx.strokeRect(36,24,22,20);
-    for (let x=10;x<=54;x+=8) {
-      titleCtx.fillRect(x,16,4,4);
-      titleCtx.fillRect(x,48,4,4);
-    }
+    titleCtx.fill(iconPerforations);
     titleCtx.fillRect(14,28,4,4);
     titleCtx.fillRect(22,36,6,4);
     titleCtx.fillRect(40,36,8,4);
@@ -411,15 +422,14 @@
     const base = film.createLinearGradient(4,14,64,54);
     base.addColorStop(0,'rgba(255,255,255,.64)');
     base.addColorStop(1,'rgba(255,255,255,.22)');
+    film.fillStyle = 'rgba(255,255,255,.64)';
+    film.fillRect(4,14,60,8);
+    film.fillRect(4,46,60,8);
     film.fillStyle = base;
-    film.fillRect(4,14,60,40);
+    film.fillRect(4,22,60,24);
     film.lineWidth = 1;
     film.strokeStyle = 'rgba(255,255,255,.88)';
     film.strokeRect(4,14,60,40);
-    for (let x=7;x<62;x+=6) {
-      film.clearRect(x,17,3.3,3);
-      film.clearRect(x,48,3.3,3);
-    }
     for (const [x,reversed] of [[8,false],[36,true]]) {
       film.clearRect(x,23,24,21);
       film.save();
@@ -583,6 +593,14 @@
     if (artwork) {
       target.fillStyle = '#fff';
       drawArtworkCharacters(target,data,size,width);
+      if (icon.dataset.icon==='film') {
+        // Punch through the final glyphs so cell size cannot shift or bridge a hole.
+        target.save();
+        target.scale(unit,unit);
+        target.globalCompositeOperation = 'destination-out';
+        target.fill(artworkPerforations);
+        target.restore();
+      }
     } else {
       drawPhosphorDots(target,data,size,size,2*density,0,0);
     }
