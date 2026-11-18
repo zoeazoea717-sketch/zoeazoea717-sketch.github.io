@@ -18,7 +18,7 @@
   const errorWindow = find('.access-error');
   const retryButton = find('.retry-access');
   const worksDirectory = find('.works-directory');
-  const hiringToggle = find('[data-group="hiring"]');
+  const privateToggle = find('[data-group="private"]');
   const worksToken = '23fd7c32ae6aa3c05b72677ecb055e26e95d8d2e002462bbbbe9ce7346ee107d';
   const worksSessionKey = 'zoea.works.access';
   let worksUnlocked = false, checkingPassword = false;
@@ -694,9 +694,9 @@
     root.toggleAttribute('data-file-open',Boolean(file));
     aboutContent.hidden = !about;
     worksDirectory.hidden = !works || Boolean(file);
-    const hiringOpen = !worksDirectory.hidden && hiringToggle.getAttribute('aria-expanded')==='true';
-    worksLock.hidden = !hiringOpen || worksUnlocked;
-    worksReady.hidden = !hiringOpen || !worksUnlocked;
+    const privateOpen = !worksDirectory.hidden && privateToggle.getAttribute('aria-expanded')==='true';
+    worksLock.hidden = !privateOpen || worksUnlocked;
+    worksReady.hidden = !privateOpen || !worksUnlocked;
     if (worksLock.hidden) {
       worksPassword.value = '';
       worksError = null;
@@ -705,7 +705,7 @@
     toolDirectory.hidden = about || Boolean(file) || categoryId!=='tools';
     for (const button of disclosures) {
       const expanded = button.getAttribute('aria-expanded')==='true';
-      const groupName = button===hiringToggle ? text('hiring','求职资料') :
+      const groupName = button===privateToggle ? text('privateArchive','个人档案') :
         button.dataset.group==='mod' ? 'MOD' : text('programs','程序');
       button.textContent = (expanded ? '▾ ' : '▸ ')+groupName;
       document.getElementById(button.getAttribute('aria-controls')).hidden = !expanded;
@@ -770,7 +770,7 @@
         worksUnlocked = true;
         try { sessionStorage.setItem(worksSessionKey,worksToken); } catch {}
         updateContent();
-        hiringToggle.focus({preventScroll:true});
+        privateToggle.focus({preventScroll:true});
         document.dispatchEvent(new CustomEvent('zoea-access-result',{detail:{ok:true}}));
         refreshPanel();
         return;

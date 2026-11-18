@@ -53,12 +53,12 @@
     const scope = dialog || (home.hidden ? archive : home);
     const active = document.activeElement;
     if (key==='Escape' && !dialog && !event.repeat && scope===archive) {
-      const hiring = archive.querySelector('[data-group="hiring"]');
+      const privateToggle = archive.querySelector('[data-group="private"]');
       const file = archive.querySelector('.file-properties:not([hidden])');
       if (file) file.querySelector('.file-action').click();
-      else if (hiring.getClientRects().length && hiring.getAttribute('aria-expanded')==='true') {
-        hiring.click();
-        hiring.focus();
+      else if (privateToggle.getClientRects().length && privateToggle.getAttribute('aria-expanded')==='true') {
+        privateToggle.click();
+        privateToggle.focus();
       } else archive.querySelector('.wordmark').click();
       event.preventDefault();
       return;

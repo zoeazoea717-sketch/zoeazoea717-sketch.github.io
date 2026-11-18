@@ -8,14 +8,14 @@
   <link rel="stylesheet" href="./assets/site.css?v=works-keyboard">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
   <link rel="stylesheet" href="./assets/archive.css?v=works-keyboard">
-  <script defer src="./assets/language.js?v=works-keyboard"></script>
+  <script defer src="./assets/language.js?v=private-archive"></script>
   <script defer src="./assets/motion.js?v=works-access"></script>
   <script defer src="./assets/shell.js?v=works-keyboard"></script>
   <script defer src="./assets/terrain.js"></script>
   <script defer src="./assets/sound.js?v=works-keyboard"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=works-keyboard"></script>
-  <script defer src="./assets/keyboard.js?v=works-keyboard"></script>
+  <script defer src="./assets/archive.js?v=private-archive"></script>
+  <script defer src="./assets/keyboard.js?v=private-archive"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -58,12 +58,12 @@
             <p class="directory-note" data-file-text data-i18n="publicEmpty">暂时还没有公开的作品。</p>
           </section>
           <section>
-            <h2><button type="button" class="tool-disclosure" data-group="hiring" aria-expanded="false" aria-controls="hiring-content" data-file-text>▸ 求职资料</button></h2>
-            <div id="hiring-content" hidden>
+            <h2><button type="button" class="tool-disclosure" data-group="private" aria-expanded="false" aria-controls="private-archive" data-file-text>▸ 个人档案</button></h2>
+            <div id="private-archive" hidden>
               <form class="works-lock" aria-labelledby="zoea-works-lock-title" novalidate hidden>
                 <div class="works-lock-title">
                   <span class="works-lock-symbol" aria-hidden="true"></span>
-                  <h3 id="zoea-works-lock-title" data-works-text data-i18n="worksLocked">个人简历与求职作品集</h3>
+                  <h3 id="zoea-works-lock-title" data-works-text data-i18n="worksLocked">档案访问</h3>
                 </div>
                 <label for="zoea-works-password" data-works-text data-i18n="worksPassword">访问密码</label>
                 <div class="works-lock-fields">
@@ -79,8 +79,8 @@
                 </div>
               </form>
               <div class="works-unlocked" hidden>
-                <section><h3 data-works-text data-i18n="resume">个人简历</h3><p data-works-text data-i18n="resumeEmpty">简历待上传。</p></section>
-                <section><h3 data-works-text data-i18n="hiringPortfolio">求职作品集</h3><p data-works-text data-i18n="portfolioEmpty">作品集待上传。</p></section>
+                <section><h3 data-works-text data-i18n="resume">个人履历</h3><p data-works-text data-i18n="resumeEmpty">履历待上传。</p></section>
+                <section><h3 data-works-text data-i18n="selectedWork">作品选集</h3><p data-works-text data-i18n="portfolioEmpty">作品待上传。</p></section>
               </div>
             </div>
           </section>
