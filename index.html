@@ -7,15 +7,15 @@
   <title>ZOEA</title>
   <link rel="stylesheet" href="./assets/site.css?v=works-keyboard">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
-  <link rel="stylesheet" href="./assets/archive.css?v=works-keyboard">
-  <script defer src="./assets/language.js?v=private-archive"></script>
+  <link rel="stylesheet" href="./assets/archive.css?v=film-comparison">
+  <script defer src="./assets/language.js?v=film-comparison"></script>
   <script defer src="./assets/motion.js?v=works-access"></script>
   <script defer src="./assets/shell.js?v=works-keyboard"></script>
   <script defer src="./assets/terrain.js"></script>
-  <script defer src="./assets/sound.js?v=works-keyboard"></script>
+  <script defer src="./assets/sound.js?v=film-comparison"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=film-perforations"></script>
-  <script defer src="./assets/keyboard.js?v=private-archive"></script>
+  <script defer src="./assets/archive.js?v=film-comparison"></script>
+  <script defer src="./assets/keyboard.js?v=film-comparison"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -128,11 +128,17 @@
                 <h3 id="film-example-title" data-file-text data-i18n="filmExample">实拍对照 · v2.2</h3>
                 <div class="film-pair">
                   <figure>
-                    <img class="film-print" src="./assets/film-negative-proof.svg" width="168" height="112" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
+                    <button type="button" class="film-thumb" aria-haspopup="dialog" aria-controls="film-viewer" aria-label="翻拍负片，打开黑白对照" data-i18n-label="openFilmBefore">
+                      <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
                     <figcaption data-file-text data-i18n="filmBefore">翻拍负片</figcaption>
                   </figure>
                   <figure>
-                    <img class="film-print" src="./assets/film-positive-proof.svg" width="168" height="112" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
+                    <button type="button" class="film-thumb" aria-haspopup="dialog" aria-controls="film-viewer" aria-label="自动输出，打开黑白对照" data-i18n-label="openFilmAfter">
+                      <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
                     <figcaption data-file-text data-i18n="filmAfter">自动输出</figcaption>
                   </figure>
                 </div>
@@ -233,6 +239,22 @@
       <div class="qq-code" role="img" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
         <img class="crt-signal" src="./assets/qq-code.svg" alt="" width="340" height="340">
       </div>
+    </div>
+  </dialog>
+  <dialog id="film-viewer" aria-labelledby="film-viewer-title">
+    <div class="film-viewer-bar">
+      <h2 id="film-viewer-title" data-i18n="filmViewer">黑白实拍对照 · v2.2</h2>
+      <form method="dialog"><button type="submit" autofocus data-i18n="filmClose">关闭</button></form>
+    </div>
+    <div class="film-pair">
+      <figure>
+        <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
+        <figcaption data-i18n="filmBefore">翻拍负片</figcaption>
+      </figure>
+      <figure>
+        <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
+        <figcaption data-i18n="filmAfter">自动输出</figcaption>
+      </figure>
     </div>
   </dialog>
 </section>

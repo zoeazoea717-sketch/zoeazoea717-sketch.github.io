@@ -36,19 +36,14 @@
   const fileIcons = [...root.querySelectorAll('.file-icon')];
   const paintedIcons = new WeakSet();
   const filmExample = find('.film-example');
-  const filmPrints = [...filmExample.querySelectorAll('.film-print')];
-  for (const image of filmPrints) {
-    image.addEventListener('load',()=>{
-      if (!root.hidden && image.getClientRects().length) render();
-    });
-  }
+  const filmViewer = find('#film-viewer');
   const qqDialog = find('#zoea-qq');
   const qqButton = find('[aria-controls="zoea-qq"]');
   const qqIcon = qqButton.querySelector('img');
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
-  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .works-lock input, .works-lock button';
+  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .film-thumb, .works-lock input, .works-lock button';
   const controls = [...root.querySelectorAll(controlSelector)];
   const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
@@ -205,10 +200,7 @@
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
     return {layout,
-      film:file?.contains(filmExample) ? {
-        box:measureBox(filmExample),
-        prints:filmPrints.map(image=>({image,...measureBox(image)}))
-      } : null,
+      film:file?.contains(filmExample) ? measureBox(filmExample) : null,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
@@ -303,17 +295,10 @@
         labelsCtx.restore();
       }
       if (film) {
-        const {box,prints} = film;
         labelsCtx.globalAlpha = .34;
         labelsCtx.fillStyle = '#fff';
-        labelsCtx.fillRect(box.left,box.top,box.width,1);
-        labelsCtx.fillRect(box.left,box.top+box.height-1,box.width,1);
-        for (const {image,left,top,width,height} of prints) {
-          if (!image.naturalWidth) continue;
-          labelsCtx.globalAlpha = .68;
-          labelsCtx.drawImage(image,left,top,width,height);
-          outline({left,top,width,height},.24);
-        }
+        labelsCtx.fillRect(film.left,film.top,film.width,1);
+        labelsCtx.fillRect(film.left,film.top+film.height-1,film.width,1);
       }
     }
     for (const {label,lines,fontWeight,fontSize,fontFamily,left,bottom,width:boxWidth} of layout) {
@@ -877,14 +862,14 @@
     qqClosing = null;
     resetQqPerspective();
   }
-  function playQqCue(open) {
-    qqDialog.dispatchEvent(new CustomEvent('crt-qq-toggle',{bubbles:true,detail:open}));
+  function playDialogCue(open) {
+    root.dispatchEvent(new CustomEvent('crt-dialog-toggle',{bubbles:true,detail:open}));
   }
   function closeQq(event) {
     event.preventDefault();
     if (!qqDialog.open || qqClosing) return;
     cancelAnimationFrame(qqPointerFrame);
-    playQqCue(false);
+    playDialogCue(false);
     if (reduced.matches) {
       qqDialog.close();
       return;
@@ -901,7 +886,7 @@
     resetQqAnimation();
     qqDialog.showModal();
     initializeQqDisplay();
-    playQqCue(true);
+    playDialogCue(true);
   });
   qqDialog.addEventListener('submit',closeQq);
   qqDialog.addEventListener('cancel',closeQq);
@@ -912,7 +897,22 @@
     if (event.target===qqDialog) closeQq(event);
   });
 
+  for (const thumb of filmExample.querySelectorAll('.film-thumb')) {
+    thumb.addEventListener('click',()=>{
+      filmViewer.showModal();
+      filmViewer.scrollTop = 0;
+      playDialogCue(true);
+    });
+  }
+  filmViewer.addEventListener('close',()=>playDialogCue(false));
+  filmViewer.addEventListener('click',event=>{
+    if (event.target!==filmViewer) return;
+    const box = filmViewer.getBoundingClientRect();
+    if (event.clientX<box.left || event.clientX>=box.right || event.clientY<box.top || event.clientY>=box.bottom) filmViewer.close();
+  });
+
   root.addEventListener('crt-view',event=>{
+    if (filmViewer.open && event.detail!=='projects/tools/film-scan-helper') filmViewer.close();
     if (event.detail!=='about' && qqDialog.open) {
       resetQqAnimation();
       qqDialog.close();

@@ -86,7 +86,7 @@
   function playControlCue(event) {
     if (muted || event.defaultPrevented || screen.inert || (!event.isTrusted && !navigationKey)) return;
     const control = event.target.closest('button:not(:disabled),a[href]');
-    if (!control || control.matches('.crt-mute,.about-contact,#zoea-qq button,.works-lock [type="submit"]')) return;
+    if (!control || control.matches('.crt-mute,.about-contact,.film-thumb,dialog button,.works-lock [type="submit"]')) return;
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
     if (control.matches('.file-tile,.file-action[href^="#projects/"]')) {
       // Opening another tab leaves this tab's route unchanged.
@@ -125,7 +125,7 @@
     if (muted || !previous || previous===currentView || currentView==='home') return;
     if (fileViews.has(previous) || fileViews.has(currentView)) play('qq-open');
   });
-  screen.addEventListener('crt-qq-toggle',event=>{
+  screen.addEventListener('crt-dialog-toggle',event=>{
     if (!muted) play(event.detail ? 'qq-open' : 'qq-close');
   });
 

@@ -65,6 +65,7 @@
     }
     if (active?.matches('input,textarea,select,[contenteditable="true"]')) return;
     if (key.startsWith('Arrow') && !event.shiftKey) {
+      if (dialog?.id==='film-viewer') return;
       event.preventDefault();
       if (!dialog || dialog.querySelectorAll(selectable).length>1) moveFocus(scope,key);
     } else if (!event.repeat && key==='Enter' && scope===home && !scope.contains(active)) {
