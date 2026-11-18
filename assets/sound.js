@@ -86,7 +86,7 @@
   function playControlCue(event) {
     if (muted || event.defaultPrevented || screen.inert || (!event.isTrusted && !navigationKey)) return;
     const control = event.target.closest('button:not(:disabled),a[href]');
-    if (!control || control.matches('.crt-mute,.about-contact,.film-thumb,dialog button,.works-lock [type="submit"]')) return;
+    if (!control || control.matches('.crt-mute,.about-contact,.preview-thumb,dialog button,.works-lock [type="submit"]')) return;
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
     if (control.matches('.file-tile,.file-action[href^="#projects/"]')) {
       // Opening another tab leaves this tab's route unchanged.

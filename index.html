@@ -7,15 +7,15 @@
   <title>ZOEA</title>
   <link rel="stylesheet" href="./assets/site.css?v=works-keyboard">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
-  <link rel="stylesheet" href="./assets/archive.css?v=shared-preview-crt">
-  <script defer src="./assets/language.js?v=film-comparison"></script>
+  <link rel="stylesheet" href="./assets/archive.css?v=tool-previews">
+  <script defer src="./assets/language.js?v=tool-previews"></script>
   <script defer src="./assets/motion.js?v=works-access"></script>
   <script defer src="./assets/shell.js?v=works-keyboard"></script>
   <script defer src="./assets/terrain.js"></script>
-  <script defer src="./assets/sound.js?v=film-comparison"></script>
+  <script defer src="./assets/sound.js?v=tool-previews"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=shared-preview-crt"></script>
-  <script defer src="./assets/keyboard.js?v=film-comparison"></script>
+  <script defer src="./assets/archive.js?v=tool-previews"></script>
+  <script defer src="./assets/keyboard.js?v=tool-previews"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -124,19 +124,19 @@
             <div class="file-description">
               <h3 data-file-text data-i18n="fileDescription">介绍</h3>
               <p data-file-text data-i18n="filmScanIntro">这是我给用数码相机和片夹翻拍 135 黑白负片做的 Photoshop 插件。选中一卷照片的文件夹，它就能批量调平、裁掉片夹边缘、把负片转正，并设定黑白场。</p>
-              <section class="film-example" aria-labelledby="film-example-title">
+              <section class="asset-example" aria-labelledby="film-example-title" data-viewer-key="filmViewer" data-viewer-title="黑白实拍对照 · v2.2">
                 <h3 id="film-example-title" data-file-text data-i18n="filmExample">实拍对照 · v2.2</h3>
-                <div class="film-pair">
+                <div class="preview-pair">
                   <figure>
-                    <button type="button" class="film-thumb" aria-haspopup="dialog" aria-controls="film-viewer" aria-label="翻拍负片，打开黑白对照" data-i18n-label="openFilmBefore">
-                      <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="">
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-label="翻拍负片，打开黑白对照" data-i18n-label="openFilmBefore">
+                      <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
                       <span aria-hidden="true">⤢</span>
                     </button>
                     <figcaption data-file-text data-i18n="filmBefore">翻拍负片</figcaption>
                   </figure>
                   <figure>
-                    <button type="button" class="film-thumb" aria-haspopup="dialog" aria-controls="film-viewer" aria-label="自动输出，打开黑白对照" data-i18n-label="openFilmAfter">
-                      <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="">
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-label="自动输出，打开黑白对照" data-i18n-label="openFilmAfter">
+                      <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
                       <span aria-hidden="true">⤢</span>
                     </button>
                     <figcaption data-file-text data-i18n="filmAfter">自动输出</figcaption>
@@ -155,8 +155,8 @@
             </div>
           </footer>
         </article>
-        <article class="file-properties" data-file-id="gwent-finder" aria-labelledby="zoea-heading" hidden>
-          <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
+        <article class="file-properties" data-file-id="gwent-finder" aria-labelledby="gwent-file-title" hidden>
+          <h2 id="gwent-file-title" class="file-bar" data-file-text data-i18n="gwentFinder">昆特牌狩牌手札</h2>
           <div class="file-body">
             <div class="file-summary">
               <dl>
@@ -170,6 +170,25 @@
             <div class="file-description">
               <h3 data-file-text data-i18n="fileDescription">介绍</h3>
               <p data-file-text data-i18n="gwentIntro">这是给《巫师 3》收集昆特牌用的小工具。它能读取你最近的存档，按地区列出还缺哪些牌。可以按名称搜索、按地区或资料片筛选，也能导出缺牌清单。卡表覆盖本体、《石之心》和《血与酒》。</p>
+              <section class="asset-example" aria-labelledby="gwent-example-title" data-viewer-key="gwentViewer" data-viewer-title="昆特牌狩牌手札 · 3.0 离线测试版">
+                <h3 id="gwent-example-title" data-file-text data-i18n="gwentExample">界面实录 · 演示收藏</h3>
+                <div class="preview-pair">
+                  <figure>
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-labelledby="gwent-overview-caption asset-preview-hint">
+                      <img class="interface-sample" src="./assets/gwent-overview-sample.jpg" width="1014" height="520" loading="lazy" alt="演示收藏已收集 128 种牌，缺少的 84 种按地区统计" data-i18n-alt="gwentOverviewAlt">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
+                    <figcaption id="gwent-overview-caption" data-file-text data-i18n="gwentOverview">按地区查看缺牌</figcaption>
+                  </figure>
+                  <figure>
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-labelledby="gwent-detail-caption asset-preview-hint">
+                      <img class="interface-sample" src="./assets/gwent-detail-sample.jpg" width="1014" height="520" loading="lazy" alt="选中《血与酒》和陶森特后，列表中显示该地区缺少的 10 种牌" data-i18n-alt="gwentDetailAlt">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
+                    <figcaption id="gwent-detail-caption" data-file-text data-i18n="gwentDetail">血与酒 · 陶森特筛选</figcaption>
+                  </figure>
+                </div>
+              </section>
               <p data-file-text data-i18n="gwentOffline">解压后运行包内的 EXE。退出游戏后，可以单张补牌，或一次补齐所有未拥有的牌种。工具会生成新的手动存档副本，原档保留。再进游戏载入副本。离线补牌无需安装配套 Mod，也用不到控制台。</p>
               <p data-file-text data-i18n="gwentFeedback">目前是测试版。存档副本已通过读回校验，尚未在游戏中实际载入验证。建议先试一张，留好原档。任务和成就可能不会随补牌同步。遇到问题或有改进建议，欢迎从首页的平台私信告诉我。</p>
             </div>
@@ -182,8 +201,8 @@
             </div>
           </footer>
         </article>
-        <article class="file-properties" data-file-id="web-video-downloader" aria-labelledby="zoea-heading" hidden>
-          <h2 class="file-bar" data-file-text data-i18n="fileGeneral">常规</h2>
+        <article class="file-properties" data-file-id="web-video-downloader" aria-labelledby="downloader-file-title" hidden>
+          <h2 id="downloader-file-title" class="file-bar" data-file-text data-i18n="videoDownloader">网页视频下载器</h2>
           <div class="file-body">
             <div class="file-summary">
               <dl>
@@ -198,6 +217,25 @@
               <h3 data-file-text data-i18n="fileDescription">介绍</h3>
               <a class="file-source" data-file-text data-i18n="downloaderCredit" href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener noreferrer">基于 yt-dlp 开发 ↗</a>
               <p data-file-text data-i18n="downloaderIntro">把想保存的视频链接粘贴进来，选好文件夹，就可以交给队列慢慢下。一回要存好几个视频时，也可以一次贴入多个链接。</p>
+              <section class="asset-example" aria-labelledby="downloader-example-title" data-viewer-key="downloaderViewer" data-viewer-title="网页视频下载器 · 1.1.0">
+                <h3 id="downloader-example-title" data-file-text data-i18n="downloaderExample">界面实录 · 1.1.0</h3>
+                <div class="preview-pair">
+                  <figure>
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-labelledby="downloader-input-caption asset-preview-hint">
+                      <img class="interface-sample" src="./assets/downloader-input-sample.jpg" width="1680" height="1092" loading="lazy" alt="两条公开视频链接已被识别，可在同一窗口选择保存位置和输出格式" data-i18n-alt="downloaderInputAlt">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
+                    <figcaption id="downloader-input-caption" data-file-text data-i18n="downloaderInput">批量添加链接</figcaption>
+                  </figure>
+                  <figure>
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-labelledby="downloader-format-caption asset-preview-hint">
+                      <img class="interface-sample" src="./assets/downloader-format-sample.jpg" width="1218" height="792" loading="lazy" alt="输出格式菜单展开，提供最佳画质、MP4 视频和 MP3 音频三种选项" data-i18n-alt="downloaderFormatAlt">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
+                    <figcaption id="downloader-format-caption" data-file-text data-i18n="downloaderFormat">选择输出格式</figcaption>
+                  </figure>
+                </div>
+              </section>
               <p data-file-text data-i18n="downloaderFormats">可以保留视频的最佳画质，也可以选 MP4。如果只想听声音，就选 MP3，程序会把音轨单独存下来。</p>
               <p data-file-text data-i18n="downloaderInstall">下载并运行 Windows 64 位安装包即可。安装包已带上下载和转码所需的组件。</p>
             </div>
@@ -241,28 +279,20 @@
       </div>
     </div>
   </dialog>
-  <dialog id="film-viewer" class="preview-dialog" aria-labelledby="film-viewer-title">
-    <div class="preview-glass film-glass">
-      <div class="film-plane">
-        <div class="film-viewer-bar">
-          <h2 id="film-viewer-title" data-i18n="filmViewer">黑白实拍对照 · v2.2</h2>
-          <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭" data-i18n-label="filmClose" autofocus><span aria-hidden="true"></span></button></form>
+  <span id="asset-preview-hint" data-i18n="openAssetPreview" hidden>打开大预览</span>
+  <dialog id="asset-viewer" class="preview-dialog" aria-labelledby="asset-viewer-title">
+    <div class="preview-glass asset-glass">
+      <div class="asset-plane">
+        <div class="asset-viewer-bar">
+          <h2 id="asset-viewer-title"></h2>
+          <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭" data-i18n-label="previewClose" autofocus><span aria-hidden="true"></span></button></form>
         </div>
-        <div class="film-pair">
-          <figure>
-            <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
-            <figcaption data-i18n="filmBefore">翻拍负片</figcaption>
-          </figure>
-          <figure>
-            <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
-            <figcaption data-i18n="filmAfter">自动输出</figcaption>
-          </figure>
-        </div>
+        <div class="preview-pair"></div>
       </div>
     </div>
     <svg class="preview-filter" width="0" height="0" aria-hidden="true" focusable="false">
       <defs>
-        <filter id="film-screen-curve" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <filter id="preview-screen-curve" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
           <feImage href="./assets/preview-curvature.png" preserveAspectRatio="none" result="curve"></feImage>
           <feComponentTransfer in="curve" result="scaled-curve">
             <feFuncR type="linear"></feFuncR>

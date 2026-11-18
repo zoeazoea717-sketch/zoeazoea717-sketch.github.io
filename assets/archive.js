@@ -35,15 +35,14 @@
     .map(detail=>[detail.dataset.fileId ?? 'film-scan-helper',detail]));
   const fileIcons = [...root.querySelectorAll('.file-icon')];
   const paintedIcons = new WeakSet();
-  const filmExample = find('.film-example');
-  const filmViewer = find('#film-viewer');
+  const assetViewer = find('#asset-viewer');
   const qqDialog = find('#zoea-qq');
   const qqButton = find('[aria-controls="zoea-qq"]');
   const qqIcon = qqButton.querySelector('img');
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
-  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .film-thumb, .works-lock input, .works-lock button';
+  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .preview-thumb, .works-lock input, .works-lock button';
   const controls = [...root.querySelectorAll(controlSelector)];
   const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
@@ -199,8 +198,9 @@
     }
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
+    const example = file?.querySelector('.asset-example');
     return {layout,
-      film:file?.contains(filmExample) ? measureBox(filmExample) : null,
+      example:example ? measureBox(example) : null,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
@@ -231,7 +231,7 @@
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock,film,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
+    const {layout,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -294,11 +294,11 @@
         outline(focusBox,.94);
         labelsCtx.restore();
       }
-      if (film) {
+      if (example) {
         labelsCtx.globalAlpha = .34;
         labelsCtx.fillStyle = '#fff';
-        labelsCtx.fillRect(film.left,film.top,film.width,1);
-        labelsCtx.fillRect(film.left,film.top+film.height-1,film.width,1);
+        labelsCtx.fillRect(example.left,example.top,example.width,1);
+        labelsCtx.fillRect(example.left,example.top+example.height-1,example.width,1);
       }
     }
     for (const {label,lines,fontWeight,fontSize,fontFamily,left,bottom,width:boxWidth} of layout) {
@@ -714,6 +714,8 @@
       document.getElementById(button.getAttribute('aria-controls')).hidden = !expanded;
     }
     for (const detail of fileDetails.values()) detail.hidden = detail!==file;
+    const example = file?.querySelector('.asset-example');
+    if (example) populateAssetViewer(example);
     canvas.setAttribute('aria-label',label);
     [...list.children].forEach((button,i)=>button.setAttribute('aria-pressed',String(!about && i===selected)));
     root.querySelectorAll('[data-page]').forEach(button=>{
@@ -898,30 +900,42 @@
     });
   }
   bindPreview(qqDialog,qqGlass,[qqButton],1,initializeQqDisplay);
-  const filmPlane = filmViewer.querySelector('.film-plane');
-  const filmCurve = find('#film-screen-curve');
-  function setFilmCurve() {
-    const width = filmPlane.offsetWidth, height = filmPlane.offsetHeight;
+  function populateAssetViewer(example) {
+    const {viewerKey,viewerTitle} = example.dataset;
+    assetViewer.querySelector('h2').textContent = window.zoeaLocale.text(viewerKey,viewerTitle);
+    const figures = [...example.querySelectorAll('figure')].map(source=>{
+      const figure = document.createElement('figure');
+      const caption = document.createElement('figcaption');
+      caption.textContent = source.querySelector('figcaption').textContent;
+      figure.append(source.querySelector('img').cloneNode(),caption);
+      return figure;
+    });
+    assetViewer.querySelector('.preview-pair').replaceChildren(...figures);
+  }
+  const assetPlane = assetViewer.querySelector('.asset-plane');
+  const assetCurve = find('#preview-screen-curve');
+  function setAssetCurve() {
+    const width = assetPlane.offsetWidth, height = assetPlane.offsetHeight;
     if (!width || !height) return;
     const longest = Math.max(width,height);
-    const map = filmCurve.querySelector('feImage');
+    const map = assetCurve.querySelector('feImage');
     map.setAttribute('width',width);
     map.setAttribute('height',height);
     // R/G encode the shared glassX/glassY offsets. Convert each axis to its own pixel extent.
     for (const [channel,size] of [['feFuncR',width],['feFuncG',height]]) {
       const slope = size/longest;
-      const fn = filmCurve.querySelector(channel);
+      const fn = assetCurve.querySelector(channel);
       fn.setAttribute('slope',slope);
       fn.setAttribute('intercept',(1-slope)/2);
     }
-    filmCurve.querySelector('feDisplacementMap').setAttribute('scale',longest*.036*geometry.bend);
+    assetCurve.querySelector('feDisplacementMap').setAttribute('scale',longest*.036*geometry.bend);
   }
-  new ResizeObserver(setFilmCurve).observe(filmPlane);
-  geometry.compactTouch.addEventListener('change',setFilmCurve);
-  bindPreview(filmViewer,filmViewer.querySelector('.film-glass'),filmExample.querySelectorAll('.film-thumb'),.82,setFilmCurve);
+  new ResizeObserver(setAssetCurve).observe(assetPlane);
+  geometry.compactTouch.addEventListener('change',setAssetCurve);
+  bindPreview(assetViewer,assetViewer.querySelector('.asset-glass'),root.querySelectorAll('.preview-thumb'),.82,setAssetCurve);
 
   root.addEventListener('crt-view',event=>{
-    if (filmViewer.open && event.detail!=='projects/tools/film-scan-helper') filmViewer.close();
+    if (assetViewer.open && event.detail!=='projects/tools/'+openFile?.dataset.fileId) assetViewer.close();
     if (event.detail!=='about' && qqDialog.open) {
       qqDialog.close();
     }
