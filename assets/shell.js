@@ -6,13 +6,14 @@
   const archive = document.getElementById('zoea-archive');
   const geometry = window.crtGeometry;
   const fileTiles = new Map([...archive.querySelectorAll('.file-tile')].map(tile=>[tile.hash.slice(1),tile]));
-  const projectRoutes = new Set(['projects','projects/works','projects/tools',...fileTiles.keys()]);
+  const projectRoutes = new Set(['projects','projects/works','projects/works/private','projects/tools',...fileTiles.keys()]);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const ctx = background.getContext('2d');
   const flowCtx = streamLayer.getContext('2d');
   const field = document.createElement('canvas');
   const fieldCtx = field.getContext('2d');
   const dots = [], streams = [];
+  const openFields = new Set();
   let cellPitch = 5.5;
   let width = 0, height = 0, scale = 1, bend = 1;
   let lastPaint = -Infinity;
@@ -105,7 +106,7 @@
     ctx.clearRect(0,0,width,height);
     ctx.drawImage(field,0,0,width,height);
     flowCtx.clearRect(0,0,width,height);
-    if (reduced.matches) return;
+    if (reduced.matches) { paintPopupFields(); return; }
     const t = now/1000;
     ctx.fillStyle = '#ffc17b';
     for (const [x,y,seed] of dots) {
@@ -134,8 +135,59 @@
       }
     }
     flowCtx.globalAlpha = 1;
+    paintPopupFields();
     schedule();
   }
+
+  // Copy the existing phosphor and stream layers at their current phase into the
+  // top-layer dialogs. The curved glass, media, and native controls stay separate.
+  function paintPopupFields() {
+    if (!background.width || !background.height) return;
+    for (const canvas of openFields) {
+      const w = canvas.width, h = canvas.height;
+      if (!w || !h) continue;
+      const ratio = Math.min(background.width/w, background.height/h, scale);
+      const sw = w*ratio, sh = h*ratio;
+      const sx = (background.width-sw)/2, sy = (background.height-sh)/2;
+      const pen = canvas.getContext('2d');
+      pen.clearRect(0,0,w,h);
+      pen.drawImage(background,sx,sy,sw,sh,0,0,w,h);
+      if (!reduced.matches) pen.drawImage(streamLayer,sx,sy,sw,sh,0,0,w,h);
+    }
+  }
+
+  const fieldSizes = new ResizeObserver(entries=>{
+    for (const {target:canvas,contentRect} of entries) {
+      if (!openFields.has(canvas)) continue;
+      const w = Math.round(contentRect.width), h = Math.round(contentRect.height);
+      if (canvas.width!==w) canvas.width = w;
+      if (canvas.height!==h) canvas.height = h;
+    }
+    schedule();
+  });
+  function syncPopupField(dialog) {
+    const surface = dialog.querySelector('[data-popup-surface]');
+    if (!surface) return;
+    let canvas = surface.querySelector(':scope > .popup-field');
+    if (dialog.open) {
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.className = 'popup-field';
+        canvas.setAttribute('aria-hidden','true');
+        surface.prepend(canvas);
+      }
+      openFields.add(canvas);
+      fieldSizes.observe(canvas);
+      schedule();
+    } else if (canvas) {
+      fieldSizes.unobserve(canvas);
+      openFields.delete(canvas);
+    }
+  }
+  new MutationObserver(records=>{
+    for (const {target} of records) if (target.matches('dialog.preview-dialog')) syncPopupField(target);
+  }).observe(archive,{subtree:true,attributes:true,attributeFilter:['open']});
+  archive.querySelectorAll('dialog.preview-dialog[open]').forEach(syncPopupField);
 
   function schedule() {
     if (!frame && !document.hidden) frame = requestAnimationFrame(draw);

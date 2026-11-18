@@ -27,7 +27,8 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     'precision highp float;',
     'out vec4 color;',
     'uniform vec2 size, viewport, pointer;',
-    'uniform vec4 panel, entryCaret;',
+    'uniform vec4 panel, writeBounds, entryCaret;',
+    'uniform vec3 writeEdge;',
     'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime, bend;',
     'uniform bool home, closeup;',
     'uniform sampler2D signalTex;',
@@ -160,15 +161,15 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     '      +bell(rim.x/(1.12+.85*response))*vertical;',
     '    float frameLight=frame*(.19+.26*response);',
     '    float panelStructure=frameLight+panelGraticule(p,extent)*(1.+.35*response);',
-    '    float frontier=mix(panel.x-.018,panel.z+.038,panelRefresh);',
-    '    float gate=1.-smoothstep(frontier-.007,frontier,q.x);',
+    '    float frontier=writeEdge.x;',
+    '    float gate=1.-smoothstep(writeEdge.y,writeEdge.z,q.x);',
     '    float peak=.55+.45*pow(.5+.5*sin(panelRefresh*31.),2.);',
     '    float writeHead=bell((q.x-frontier+.013)/(.011+.021*peak));',
     '    float afterglow=bell((q.x-frontier+.052)/.053);',
     '    float writeGain=1.+writeHead*(.8+peak)+afterglow*.32;',
     '    float interior=smoothstep(9.,32.,edgeDistance);',
     '    float trace=writeHead*interior*beam*(.012+.026*peak);',
-    '    if(!entering && panelRefresh<1.) value=value*gate*writeGain+trace;',
+    '    if(!entering && panelRefresh<1. && all(greaterThanEqual(q,writeBounds.xy)) && all(lessThanEqual(q,writeBounds.zw))) value=value*gate*writeGain+trace;',
     '    structure=panelStructure*(.90+.10*bell(phase/.30));',
     '  }',
     '  value=clamp((value+structure)*(1.+squeeze*.85),0.,1.);',
@@ -181,10 +182,8 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     '      float caret=bell(length(caretDistance)/1.3)*.83+bell(length(caretDistance)/6.)*.19;',
     '      value=(value*(1.+.36*smoothstep(96.,150.,entryTime))+caret*flash)*rasterMask;',
     '    } else {',
-    '      float write=clamp((entryTime-192.)/222.,0.,1.);',
-    '      float frontier=mix(-.045,1.11,write);',
-    '      float age=frontier-q.x;',
-    '      float gate=smoothstep(.007,.032,age);',
+    '      float age=writeEdge.x-q.x;',
+    '      float gate=1.-smoothstep(writeEdge.y,writeEdge.z,q.x);',
     '      float structureGate=smoothstep(-.017,.006,age);',
     '      float tail=gate*exp(-max(0.,age-.028)/.058);',
     '      float edgeLight=bell(age/.008)*(.022+.032*bell(phase/.27));',
@@ -220,7 +219,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
   gl.useProgram(program);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   const uniforms = Object.fromEntries(
-    ['size','viewport','pointer','pointerPresence','panel','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret','bend']
+    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret','bend']
       .map(name => [name, gl.getUniformLocation(program, name)])
   );
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -241,8 +240,8 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
   let x = 0, y = 0, targetX = 0, targetY = 0;
   let presence = 0, pointerInside = false;
   let renderScene, lastScene = -Infinity;
-  let animateSignal = true, updateHitAreas;
-  let panelBounds = [0,0,0,0], refreshStart = -Infinity;
+  let animateSignal = true, updateHitAreas, updatePanelMedia;
+  let panelBounds = [0,0,0,0], writeBounds = null, refreshStart = -Infinity;
   let entryCaret = [-1,-1,0,0];
   const cap = (n, min, max) => Math.max(min, Math.min(max, n));
 
@@ -282,7 +281,21 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     gl.uniform1f(uniforms.bend, bend);
     gl.uniform1f(uniforms.pointerPresence,presence);
     gl.uniform4fv(uniforms.panel,panelBounds);
-    gl.uniform1f(uniforms.panelRefresh,reduced.matches ? 1 : cap((now-refreshStart)/570,0,1));
+    const bounds = writeBounds ?? panelBounds;
+    const progress = reduced.matches ? 1 : cap((now-refreshStart)/570,0,1);
+    const enteringArchive = !home && entryTime>=0;
+    // Both renderers use this edge in the unprojected page, before glass distortion.
+    const front = enteringArchive ? -.045+1.155*cap((entryTime-192)/222,0,1)
+      : bounds[0]-.018+(bounds[2]-bounds[0]+.056)*progress;
+    const solid = front-(enteringArchive ? .032 : .007);
+    const clear = front-(enteringArchive ? .007 : 0);
+    gl.uniform4fv(uniforms.writeBounds,bounds);
+    gl.uniform1f(uniforms.panelRefresh,progress);
+    gl.uniform3f(uniforms.writeEdge,front,solid,clear);
+    if (updatePanelMedia) {
+      if (enteringArchive || (progress<1 && !writeBounds)) updatePanelMedia(solid,clear);
+      else updatePanelMedia(1,1);
+    }
     gl.uniform1f(uniforms.power,reduced.matches ? 1 : root.crtPower?.() ?? 1);
     gl.uniform1f(uniforms.entryTime,entryTime);
     gl.uniform4fv(uniforms.entryCaret,entryCaret);
@@ -350,12 +363,18 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
   root.crtLive = {
     setPanel(bounds) { panelBounds = bounds; },
     setHitAreaUpdater(update) { updateHitAreas = update; },
+    setPanelMediaUpdater(update) { updatePanelMedia = update; },
     setEntryCaret(bounds) { entryCaret = bounds; },
     present(now) {
       cancelAnimationFrame(frame);
       draw(now);
     },
-    refreshPanel() { refreshStart = performance.now(); schedule(); },
+    refreshPanel(bounds=null) {
+      writeBounds=bounds;
+      refreshStart=performance.now();
+      if (!bounds && !reduced.matches) updatePanelMedia?.(0,0);
+      schedule();
+    },
     invalidate() {
       lastScene = -Infinity;
       schedule();

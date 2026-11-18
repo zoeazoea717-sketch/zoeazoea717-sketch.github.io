@@ -108,22 +108,17 @@
   #zoea-archive .works-lock :is(p,label) { margin:0; color:var(--dim); }
   #zoea-archive #zoea-works-access-status { color:var(--pale); }
   #zoea-archive .works-directory .works-lock { margin:0 auto; border:0; }
-  #zoea-archive .works-directory .public-works-bar,
-  #zoea-archive .works-unlocked h3 {
+  #zoea-archive .works-directory .public-works-bar {
     margin:0; padding:8px clamp(10px,1.2vw,16px);
     background:#d28e521e; border-bottom:1px solid #d28e5270;
   }
   #zoea-archive .works-directory .public-works-bar { min-height:52.8px; display:grid; align-content:center; }
-  #zoea-archive .directory-note, #zoea-archive .works-unlocked p { margin:0; padding:14px clamp(12px,2vw,22px); }
-  #zoea-archive .works-unlocked:not([hidden]) {
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18em),1fr)); gap:12px; padding:12px;
-  }
-  #zoea-archive .works-unlocked section + section { margin:0; }
+  #zoea-archive .directory-note { margin:0; padding:14px clamp(12px,2vw,22px); }
   #zoea-archive .access-error { border:1px solid #d28e5270; }
   #zoea-archive .access-error p { padding:10px 12px 0; }
   #zoea-archive .access-error button { margin:4px 12px; text-decoration:underline; }
   #zoea-archive .key-guide { color:var(--dim); font-size:calc(12px * var(--crt-text-scale)); }
-  #zoea-archive.crt-live-ready :is(.works-directory .public-works-bar,.works-unlocked h3,.access-error,.access-error .file-bar) {
+  #zoea-archive.crt-live-ready :is(.works-directory .public-works-bar,.access-error,.access-error .file-bar) {
     background:transparent; border-color:transparent;
   }
   #zoea-archive.crt-ready.crt-live-ready :is(.works-lock,.works-lock-fields :is(input,button)) {
@@ -293,7 +288,6 @@
   @media (max-width:640px) {
     #zoea-archive #asset-viewer .preview-pair { grid-template-columns:1fr; }
   }
-  html:has(#asset-viewer[open]) { overflow:hidden; }
   #zoea-archive .file-source { display:inline-flex; align-items:center; min-height:44px; color:var(--pale); }
   #zoea-archive .file-actions {
     display:flex; flex-wrap:wrap; align-items:center; gap:8px;
@@ -372,10 +366,10 @@
   }
   #zoea-archive .qq-code {
     position:relative; width:var(--code-size); aspect-ratio:1;
-    background:radial-gradient(ellipse,#211006 68%,#21100670 100%);
+    background:#211006;
     mask-image:
-      linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),
-      linear-gradient(0deg,transparent,#000 8%,#000 92%,transparent);
+      linear-gradient(90deg,transparent,#000 2%,#000 98%,transparent),
+      linear-gradient(0deg,transparent,#000 2%,#000 98%,transparent);
     mask-composite:intersect;
   }
   #zoea-archive .qq-code .crt-signal {

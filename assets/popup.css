@@ -1,0 +1,59 @@
+html:has(dialog.preview-dialog[open]) { overflow: hidden; }
+
+/* The field sits behind the content and travels through the same glass as its frame. */
+#zoea-archive [data-popup-surface] {
+  position: relative;
+  isolation: isolate;
+  --edge: clamp(5px, 1.1vmin, 14px);
+  mask-image:
+    linear-gradient(to right, transparent, #0009 calc(var(--edge) * .32), black var(--edge),
+      black calc(100% - var(--edge)), #0009 calc(100% - var(--edge) * .32), transparent),
+    linear-gradient(to bottom, transparent, #0009 calc(var(--edge) * .32), black var(--edge),
+      black calc(100% - var(--edge)), #0009 calc(100% - var(--edge) * .32), transparent);
+  mask-composite: intersect;
+}
+/* Take the glow from the painted silhouette, after the child's curvature,
+   pointer tilt and reveal clip have all been applied. */
+#zoea-archive .preview-dialog {
+  --glass-afterglow: drop-shadow(0 0 3px #efa36154) drop-shadow(0 0 8px #ca783c2a);
+  filter: var(--glass-afterglow);
+}
+#zoea-archive .popup-field {
+  position: absolute; inset: 0; z-index: -1;
+  display: block; width: 100%; height: 100%;
+  pointer-events: none;
+}
+#zoea-archive .qq-glass[data-popup-surface] {
+  background: radial-gradient(ellipse, #26160ae6 25%, #211208bb 68%, transparent);
+}
+#zoea-archive .preview-dialog .asset-glass,
+#zoea-archive .preview-dialog :is(.dossier-profile-content,.dossier-view-body,#dossier-details) {
+  overflow-x: clip;
+}
+
+/* Clip the phosphor pattern to the glyphs. Borders, native focus and the invisible
+   curved hit targets keep their original geometry. The second layer holds the fill. */
+#zoea-archive .preview-dialog {
+  --ink-cell: 1.85px;
+  --ink-pattern: radial-gradient(ellipse at 37% 34%, #ffedc4 0 12%, currentColor 43%, #bc8756 76%, #a76f45);
+  --ink-glow: 0 0 1px #ffd395aa, 0 0 3px #fda25aa3, 0 0 7px #ef873753;
+}
+#zoea-archive .preview-dialog :is(h2,h3,.entry-signature,.dossier-work-title) {
+  --ink-cell: 2.25px;
+  --ink-glow: 0 0 1px #ffe6b6, 0 0 4px #ffb968ba, 0 0 10px #e9813b70;
+}
+#zoea-archive :is(dialog.preview-dialog,#dossier-entry)
+  :is(h2,h3,p,li,label,a,output,figcaption,.entry-path,.entry-signature,.entry-toolbar-title,
+      .dossier-status,.dossier-frame-count,.dossier-image-caption,button:not(.preview-close,.dossier-original)):not(.dossier-heading-live) {
+  text-shadow: var(--ink-glow);
+  @supports (background-clip: text) {
+    /* Native CRT headings already provide their own rendered dot layer. */
+    &:not(.dossier-phosphor) {
+      background-image: var(--ink-pattern), var(--ink-surface, linear-gradient(transparent,transparent));
+      background-size: var(--ink-cell) var(--ink-cell), auto;
+      background-clip: text, padding-box;
+      -webkit-text-fill-color: transparent;
+    }
+  }
+}
+#dossier-entry .access-error .file-bar { --ink-surface: linear-gradient(90deg,#61331480,#47260e55); }

@@ -49,13 +49,18 @@
   document.addEventListener('keydown',event=>{
     if (event.defaultPrevented || event.isComposing || event.altKey || event.metaKey || event.ctrlKey || screen.inert) return;
     const key = event.key;
-    const dialog = screen.querySelector('dialog[open]');
+    const dialog = screen.querySelector('#dossier-zoom[open]') || screen.querySelector('dialog[open]');
     const scope = dialog || (home.hidden ? archive : home);
     const active = document.activeElement;
     if (key==='Escape' && !dialog && !event.repeat && scope===archive) {
       const privateToggle = archive.querySelector('[data-group="private"]');
+      const groupToggle = active.closest('.dossier-group')?.querySelector('.dossier-group-toggle[aria-expanded="true"]');
       const file = archive.querySelector('.file-properties:not([hidden])');
       if (file) file.querySelector('.file-action').click();
+      else if (groupToggle) {
+        groupToggle.click();
+        groupToggle.focus();
+      }
       else if (privateToggle.getClientRects().length && privateToggle.getAttribute('aria-expanded')==='true') {
         privateToggle.click();
         privateToggle.focus();
@@ -63,9 +68,9 @@
       event.preventDefault();
       return;
     }
-    if (active?.matches('input,textarea,select,[contenteditable="true"]')) return;
+    if (active?.matches('input,textarea,select,video,[contenteditable="true"]')) return;
     if (key.startsWith('Arrow') && !event.shiftKey) {
-      if (dialog?.id==='asset-viewer') return;
+      if (dialog?.id==='asset-viewer' || dialog?.id==='dossier-reader') return;
       event.preventDefault();
       if (!dialog || dialog.querySelectorAll(selectable).length>1) moveFocus(scope,key);
     } else if (!event.repeat && key==='Enter' && scope===home && !scope.contains(active)) {

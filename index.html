@@ -7,15 +7,22 @@
   <title>ZOEA</title>
   <link rel="stylesheet" href="./assets/site.css?v=works-keyboard">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
-  <link rel="stylesheet" href="./assets/archive.css?v=tool-previews">
-  <script defer src="./assets/language.js?v=tool-previews"></script>
-  <script defer src="./assets/motion.js?v=works-access"></script>
-  <script defer src="./assets/shell.js?v=works-keyboard"></script>
-  <script defer src="./assets/terrain.js"></script>
-  <script defer src="./assets/sound.js?v=tool-previews"></script>
+  <link rel="stylesheet" href="./assets/archive.css?v=popup-glass-1">
+  <link rel="stylesheet" href="./assets/private-archive.css?v=glass-afterglow-2">
+  <link rel="stylesheet" href="./assets/private-entry.css?v=popup-field-1">
+  <link rel="stylesheet" href="./assets/popup.css?v=glass-afterglow-3">
+  <script defer src="./assets/language.js?v=art-view-1"></script>
+  <script defer src="./assets/motion.js?v=panel-write-1"></script>
+  <script defer src="./assets/shell.js?v=popup-field-1"></script>
+  <script defer src="./assets/terrain.js?v=dossier-sections-1"></script>
+  <script defer src="./assets/sound.js?v=password-typing-1"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=tool-previews"></script>
-  <script defer src="./assets/keyboard.js?v=tool-previews"></script>
+  <script defer src="./assets/private-curvature.js?v=art-view-1"></script>
+  <script defer src="./assets/private-archive.js?v=approved-copy-1"></script>
+  <script defer src="./assets/private-image-view.js?v=art-glass-1"></script>
+  <script defer src="./assets/private-entry.js?v=popup-field-1"></script>
+  <script defer src="./assets/archive.js?v=popup-glass-1"></script>
+  <script defer src="./assets/keyboard.js?v=art-view-1"></script>
 </head>
 <body>
 <canvas id="crt-backplane" aria-hidden="true"></canvas>
@@ -79,8 +86,63 @@
                 </div>
               </form>
               <div class="works-unlocked" hidden>
-                <section><h3 data-works-text data-i18n="resume">个人履历</h3><p data-works-text data-i18n="resumeEmpty">履历待上传。</p></section>
-                <section><h3 data-works-text data-i18n="selectedWork">作品选集</h3><p data-works-text data-i18n="portfolioEmpty">作品待上传。</p></section>
+                <div class="dossier-index-top">
+                  <button type="button" class="dossier-resume-launch" data-dossier-control aria-haspopup="dialog" aria-controls="dossier-reader">
+                    <strong data-works-text data-i18n="resume">个人简历</strong>
+                    <span data-works-text aria-hidden="true">↗</span><span class="dossier-surface-hit" aria-hidden="true"></span>
+                  </button>
+                  <button type="button" class="dossier-lock" data-dossier-control data-works-text data-i18n="lockArchive">锁定档案</button>
+                </div>
+                <section class="dossier-group" aria-labelledby="dossier-work-label">
+                  <h3 class="dossier-group-heading">
+                    <button type="button" class="dossier-group-toggle" data-dossier-control aria-controls="dossier-work-projects" aria-expanded="false">
+                      <span class="dossier-marker" data-works-text aria-hidden="true">▸</span>
+                      <span id="dossier-work-label" data-works-text data-i18n="workProjects">项目内容</span>
+                      <span class="dossier-surface-hit" aria-hidden="true"></span>
+                    </button>
+                  </h3>
+                  <div id="dossier-work-projects" hidden>
+                    <p class="dossier-empty" data-works-text data-i18n="workProjectsEmpty">工作项目整理中。</p>
+                  </div>
+                </section>
+                <section class="dossier-group" aria-labelledby="dossier-school-label">
+                  <h3 class="dossier-group-heading">
+                    <button type="button" class="dossier-group-toggle" data-dossier-control aria-controls="dossier-student-projects" aria-expanded="true">
+                      <span class="dossier-marker" data-works-text aria-hidden="true">▾</span>
+                      <span id="dossier-school-label" data-works-text data-i18n="schoolProjects">大学内容</span>
+                      <span class="dossier-surface-hit" aria-hidden="true"></span>
+                    </button>
+                  </h3>
+                  <div class="dossier-shelf" id="dossier-student-projects">
+                    <div class="dossier-projects" role="group" aria-label="选择作品" data-i18n-label="chooseProject"></div>
+                    <article class="dossier-card" aria-labelledby="dossier-card-name">
+                      <div class="dossier-card-stage">
+                        <button type="button" class="dossier-card-open" data-dossier-control aria-haspopup="dialog" aria-controls="dossier-lightbox">
+                          <span class="dossier-card-copy">
+                            <strong id="dossier-card-name" class="dossier-card-name" data-works-text></strong>
+                            <span class="dossier-card-kind" data-works-text></span>
+                            <span class="dossier-card-enlarge" data-works-text data-i18n="viewOriginal">查看原图 ↗</span>
+                          </span>
+                          <span class="dossier-card-media"><img alt=""></span>
+                          <span class="dossier-surface-hit dossier-card-hit" aria-hidden="true"></span>
+                        </button>
+                        <button type="button" class="dossier-card-play" data-dossier-control aria-haspopup="dialog" aria-controls="dossier-lightbox" hidden>
+                          <span class="dossier-play-symbol" aria-hidden="true"></span>
+                          <span class="dossier-play-label" data-i18n="playFilm" data-works-text>播放短片</span>
+                          <span class="dossier-duration" data-works-text></span>
+                        </button>
+                      </div>
+                      <div class="dossier-framebar">
+                        <span class="dossier-card-caption" data-works-text aria-live="polite"></span>
+                        <div class="dossier-pagination">
+                          <button type="button" data-step="-1" data-dossier-control data-works-text aria-label="上一张" data-i18n-label="previousFrame">←</button>
+                          <span class="dossier-frame-count" data-works-text></span>
+                          <button type="button" data-step="1" data-dossier-control data-works-text aria-label="下一张" data-i18n-label="nextFrame">→</button>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </section>
               </div>
             </div>
           </section>
@@ -271,8 +333,76 @@
       <span class="key-guide" data-file-text data-i18n="keyGuide" hidden>Tab / 方向键 选择 · Enter 打开 · Esc 返回</span>
     </div>
   </main>
+  <dialog id="dossier-reader" class="preview-dialog dossier-modal" aria-labelledby="dossier-dialog-title">
+    <div class="preview-glass">
+      <div class="dossier-plane" data-popup-surface>
+        <div class="dossier-modal-bar dossier-scanbar">
+          <h2 id="dossier-dialog-title" data-i18n="resume">个人简历</h2>
+          <form method="dialog"><button type="submit" class="preview-close" autofocus aria-label="关闭" data-i18n-label="previewClose"><span aria-hidden="true"></span></button></form>
+        </div>
+        <div class="dossier-profile-content"></div>
+        <div class="dossier-modal-footer">
+          <span class="dossier-status" role="status"></span>
+          <button type="button" class="dossier-download" data-i18n="downloadSelections">下载作品选页 PDF</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="dossier-lightbox" class="preview-dialog dossier-modal" aria-labelledby="dossier-lightbox-title">
+    <div class="preview-glass">
+      <div class="dossier-plane" data-popup-surface>
+        <div class="dossier-modal-bar dossier-scanbar">
+          <h2 id="dossier-lightbox-title" class="dossier-phosphor"></h2>
+          <button type="button" class="dossier-zoom-toggle" aria-haspopup="dialog" aria-controls="dossier-zoom" disabled>
+            <span aria-hidden="true">⊕</span> <span data-i18n="zoomOriginal">放大原图</span>
+          </button>
+          <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭大图" data-i18n-label="closeOriginal" autofocus><span aria-hidden="true"></span></button></form>
+        </div>
+        <div class="dossier-view-body">
+          <div class="dossier-picture">
+            <button class="dossier-original" type="button" aria-expanded="false" aria-controls="dossier-details"><img alt=""></button>
+            <div class="dossier-player" hidden></div>
+          </div>
+          <aside id="dossier-details" aria-label="作品介绍" data-i18n-label="projectInfo" inert aria-hidden="true">
+            <div class="dossier-details-heading"><h3 data-i18n="projectInfo">作品介绍</h3><button type="button" class="dossier-hide-info" aria-label="收起介绍" data-i18n-label="hideInfo">→</button></div>
+            <div class="dossier-details-copy"></div>
+          </aside>
+        </div>
+        <div class="dossier-modal-footer">
+          <div class="dossier-pagination">
+            <button type="button" data-step="-1" aria-label="上一张" data-i18n-label="previousFrame">←</button>
+            <span class="dossier-frame-count"></span>
+            <button type="button" data-step="1" aria-label="下一张" data-i18n-label="nextFrame">→</button>
+          </div>
+          <span class="dossier-image-caption" role="status"></span>
+          <button type="button" class="dossier-film" hidden></button>
+          <button type="button" class="dossier-toggle-info" aria-expanded="false" aria-controls="dossier-details"></button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="dossier-zoom" class="preview-dialog dossier-zoom" aria-labelledby="dossier-zoom-title">
+    <div class="dossier-inspector-frame" data-popup-surface>
+      <div class="dossier-zoom-header">
+        <div class="preview-glass">
+          <div class="dossier-plane dossier-zoom-bar dossier-scanbar">
+            <h2 id="dossier-zoom-title" class="dossier-phosphor"></h2>
+            <div class="dossier-zoom-scale">
+              <button type="button" data-zoom-step="-1" aria-label="缩小" data-i18n-label="zoomOut">−</button>
+              <output class="dossier-zoom-level" aria-live="off"></output>
+              <button type="button" data-zoom-step="1" aria-label="放大" data-i18n-label="zoomIn">＋</button>
+            </div>
+            <button type="button" class="dossier-zoom-reset" data-i18n="backToArtwork">返回作品 ↙</button>
+          </div>
+        </div>
+      </div>
+      <div class="dossier-zoom-viewport" tabindex="0" role="group" aria-label="原图，可拖动查看，滚轮或双指缩放" data-i18n-label="zoomCanvas">
+        <img alt="" draggable="false">
+      </div>
+    </div>
+  </dialog>
   <dialog id="zoea-qq" class="preview-dialog qq-dialog" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
-    <div class="preview-glass qq-glass">
+    <div class="preview-glass qq-glass" data-popup-surface>
       <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭二维码" data-i18n-label="closeQq" autofocus><span aria-hidden="true"></span></button></form>
       <div class="qq-code" role="img" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
         <img class="crt-signal" src="./assets/qq-code.svg" alt="" width="340" height="340">
@@ -282,7 +412,7 @@
   <span id="asset-preview-hint" data-i18n="openAssetPreview" hidden>打开大预览</span>
   <dialog id="asset-viewer" class="preview-dialog" aria-labelledby="asset-viewer-title">
     <div class="preview-glass asset-glass">
-      <div class="asset-plane">
+      <div class="asset-plane" data-popup-surface>
         <div class="asset-viewer-bar">
           <h2 id="asset-viewer-title"></h2>
           <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭" data-i18n-label="previewClose" autofocus><span aria-hidden="true"></span></button></form>

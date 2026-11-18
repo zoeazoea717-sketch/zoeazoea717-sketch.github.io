@@ -67,7 +67,8 @@
   icon.addEventListener('load',refreshIcon);
   icon.src = './assets/sound-icon.svg';
 
-  const interactionSounds = ['enter','select','return','qq-open','qq-close','focus','expand','collapse','granted','denied'];
+  const interactionSounds = ['enter','select','return','qq-open','qq-close','focus','expand','collapse','granted','denied','typing'];
+  const dossierSounds = new Set(['expand','collapse','select']);
   for (const button of muteButtons) {
     button.addEventListener('click',()=>{
       muted = !muted;
@@ -86,7 +87,9 @@
   function playControlCue(event) {
     if (muted || event.defaultPrevented || screen.inert || (!event.isTrusted && !navigationKey)) return;
     const control = event.target.closest('button:not(:disabled),a[href]');
-    if (!control || control.matches('.crt-mute,.about-contact,.preview-thumb,dialog button,.works-lock [type="submit"]')) return;
+    if (!control || control.matches('.crt-mute,.about-contact,.preview-thumb,[data-dossier-control][aria-haspopup="dialog"],.works-lock [type="submit"]')) return;
+    if (control.matches('.dossier-zoom-toggle,.dossier-zoom-reset,[data-zoom-step]')) return;
+    if (control.matches('dialog button') && !control.matches('.dossier-film,.dossier-download,.dossier-pagination button,.retry-access')) return;
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
     if (control.matches('.file-tile,.file-action[href^="#projects/"]')) {
       // Opening another tab leaves this tab's route unchanged.
@@ -96,7 +99,7 @@
     if (fileViews.has(currentView) && control.matches('[data-page],[data-category]')) return;
     if (control.matches('.terminal')) play('enter');
     else if (control.matches('.wordmark')) play('return');
-    else if (control.matches('.tool-disclosure')) play(control.getAttribute('aria-expanded')==='true' ? 'collapse' : 'expand');
+    else if (control.matches('.tool-disclosure,.dossier-group-toggle')) play(control.getAttribute('aria-expanded')==='true' ? 'collapse' : 'expand');
     else play('select');
   }
   const focusKeys = new Set(['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End']);
@@ -114,6 +117,9 @@
   document.addEventListener('zoea-access-result',event=>{
     if (!muted) play(event.detail.ok ? 'granted' : 'denied');
   });
+  archive.querySelector('#zoea-works-password').addEventListener('input',event=>{
+    if (event.isTrusted && !muted && !screen.inert) play('typing');
+  });
   archive.addEventListener('invalid',event=>{
     if (!muted && event.target.matches('#zoea-works-password')) play('denied');
   },{capture:true});
@@ -122,11 +128,19 @@
   archive.addEventListener('crt-view',event=>{
     const previous = currentView;
     currentView = event.detail;
-    if (muted || !previous || previous===currentView || currentView==='home') return;
-    if (fileViews.has(previous) || fileViews.has(currentView)) play('qq-open');
-  });
-  screen.addEventListener('crt-dialog-toggle',event=>{
+    if (muted || !previous || previous===currentView) return;
+    if (currentView!=='home' && (fileViews.has(previous) || fileViews.has(currentView))) play('qq-open');
+    else if (archive.querySelector('#dossier-lightbox[open],#dossier-reader[open]')) play('qq-close');
+  },{capture:true});
+  archive.addEventListener('crt-dialog-toggle',event=>{
     if (!muted) play(event.detail ? 'qq-open' : 'qq-close');
+  });
+  // The archive emits its state changes on its own root, including non-bubbling events.
+  archive.addEventListener('dossier-action',event=>{
+    if (!muted && dossierSounds.has(event.detail)) play(event.detail);
+  });
+  archive.addEventListener('dossier-entry-dismiss',()=>{
+    if (!muted) play('collapse');
   });
 
   document.addEventListener('zoea-language-change',updateMute);

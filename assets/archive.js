@@ -19,15 +19,8 @@
   const retryButton = find('.retry-access');
   const worksDirectory = find('.works-directory');
   const privateToggle = find('[data-group="private"]');
-  const worksToken = '23fd7c32ae6aa3c05b72677ecb055e26e95d8d2e002462bbbbe9ce7346ee107d';
-  const worksSessionKey = 'zoea.works.access';
   let worksUnlocked = false, checkingPassword = false;
   let worksError;
-  try {
-    worksUnlocked = sessionStorage.getItem(worksSessionKey)===worksToken;
-  } catch {
-    // Keep the unlock in memory if session storage is unavailable.
-  }
   const toolDirectory = find('.tool-directory:not(.works-directory)');
   const disclosures = [...root.querySelectorAll('.tool-disclosure')];
   const fileTiles = [...root.querySelectorAll('.file-tile')];
@@ -42,8 +35,8 @@
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
-  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .preview-thumb, .works-lock input, .works-lock button';
-  const controls = [...root.querySelectorAll(controlSelector)];
+  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .preview-thumb, .works-lock input, .works-lock button, [data-dossier-control]';
+  let controls = [];
   const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   let current = 'project';
@@ -82,17 +75,45 @@
   function updateHitAreas(w,h) {
     const screen = display.getBoundingClientRect();
     const aspect = w/h;
-    const areas = controls.filter(control=>control.getClientRects().length).map(control=>{
+    const areas = controls.filter(control=>!control.closest('dialog') && control.getClientRects().length).map(control=>{
       const box = control.getBoundingClientRect();
       const left = box.left-screen.left, top = box.top-screen.top;
-      const corners = [[left,top],[left+box.width,top],[left,top+box.height],[left+box.width,top+box.height]]
-        .map(([x,y])=>{
+      function source(x,y) {
           const nx = 2*x/w-1, ny = 2*y/h-1;
           return [nx,ny,nx*.5*aspect,ny*.5];
-        });
+      }
+      const corners = [source(left,top),source(left+box.width,top),source(left,top+box.height),source(left+box.width,top+box.height)];
+      const hit = control.querySelector('.dossier-surface-hit');
+      const outline = [];
+      if (hit) {
+        // Full-width rows and the artwork can bow well beyond their four corner points.
+        const across = Math.ceil(box.width/70), down = Math.ceil(box.height/70);
+        for (let i=0;i<across;i++) outline.push(source(left+box.width*i/across,top));
+        for (let i=0;i<down;i++) outline.push(source(left+box.width,top+box.height*i/down));
+        for (let i=across;i>0;i--) outline.push(source(left+box.width*i/across,top+box.height));
+        for (let i=down;i>0;i--) outline.push(source(left,top+box.height*i/down));
+      }
       control.style.transformOrigin = '0 0';
-      return {control,left,top,width:box.width,height:box.height,corners};
+      return {control,left,top,width:box.width,height:box.height,corners,hit,outline};
     });
+
+    const thumbnails = areas.filter(({control})=>control.matches('.preview-thumb'));
+    let previousFront;
+    root.crtLive.setPanelMediaUpdater(thumbnails.length ? (solid,clear)=>{
+      if (clear===previousFront) return;
+      previousFront = clear;
+      for (const {control,left,width} of thumbnails) {
+        const end = clear*w-left;
+        const start = solid*w-left;
+        if (end<=0 || start>=width) {
+          control.style.clipPath = end<=0 ? 'inset(0 100% 0 0)' : '';
+          control.style.maskImage = '';
+        } else {
+          control.style.clipPath = 'inset(0 '+Math.max(0,width-end)+'px 0 0)';
+          control.style.maskImage = 'linear-gradient(90deg, black '+start+'px, transparent '+end+'px)';
+        }
+      }
+    } : null);
 
     let lastX, lastY, lastBend;
     root.crtLive.setHitAreaUpdater((x,y,bend)=>{
@@ -103,8 +124,8 @@
       // Forward projection of the same tilted plane the CRT shader samples.
       const sx = Math.sin(y*.063), cx = Math.cos(y*.063);
       const sy = Math.sin(-x*.080), cy = Math.cos(-x*.080);
-      for (const {control,left,top,width,height,corners} of areas) {
-        const [a,b,c,d] = corners.map(([nx,ny,u,v])=>{
+      for (const {control,left,top,width,height,corners,hit,outline} of areas) {
+        function project([nx,ny,u,v]) {
           const depth = 2.3-sy*u+cy*sx*v;
           const flatX = 2.3*(cy*u+sy*sx*v)/(depth*aspect);
           const flatY = 2.3*cx*v/depth;
@@ -116,7 +137,16 @@
             py += 2*(flatY-curvedY);
           }
           return {x:(px+1)*w/2-left,y:(py+1)*h/2-top};
-        });
+        }
+        if (hit) {
+          const points = outline.map(project);
+          const xs = points.map(point=>point.x), ys = points.map(point=>point.y);
+          const l = Math.min(...xs), t = Math.min(...ys);
+          Object.assign(hit.style,{left:l+'px',top:t+'px',width:(Math.max(...xs)-l)+'px',height:(Math.max(...ys)-t)+'px',
+            clipPath:'polygon('+points.map(p=>(p.x-l).toFixed(2)+'px '+(p.y-t).toFixed(2)+'px').join(',')+')'});
+          continue;
+        }
+        const [a,b,c,d] = corners.map(project);
         // Map the native focus and pointer area to all four projected corners.
         const bx = b.x-d.x, by = b.y-d.y, cxEdge = c.x-d.x, cyEdge = c.y-d.y;
         const ex = a.x-b.x-c.x+d.x, ey = a.y-b.y-c.y+d.y;
@@ -165,7 +195,7 @@
     const range = document.createRange();
     const layout = [];
     for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, .about-content :is(h2,p), .list button, [data-file-text], [data-works-text]')) {
-      if (!label.getClientRects().length) continue;
+      if (label.closest('dialog') || !label.getClientRects().length) continue;
       if (!root.crtLive && (aboutContent.contains(label) || label.matches('[data-file-text],[data-works-text]'))) continue;
       const text = label.firstChild;
       if (text?.nodeType !== Node.TEXT_NODE) continue;
@@ -199,15 +229,28 @@
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
     const example = file?.querySelector('.asset-example');
-    return {layout,
+    const card = worksReady.querySelector('.dossier-card');
+    const transport = card.querySelector('.dossier-card-play');
+    const cardLayout = card.dataset.project && card.getClientRects().length ? {
+      box:measureBox(card), imageBox:measureBox(card.querySelector('.dossier-card-media')), frameBar:measureBox(card.querySelector('.dossier-framebar')),
+      image:card.querySelector('img'), focusY:card.hasAttribute('data-portrait') ? .32 : .5,
+      open:card.querySelector('.dossier-card-open'), rail:measureBox(find('.dossier-projects')),
+      play:transport.hidden ? null : {button:transport,box:measureBox(transport),symbol:measureBox(transport.querySelector('.dossier-play-symbol')),time:measureBox(transport.querySelector('.dossier-duration'))},
+      tabs:[...find('.dossier-projects').children].map(button=>({button,box:measureBox(button)}))
+    } : null;
+    return {layout,cardLayout,
+      dossierBars:[...worksReady.querySelectorAll('.dossier-resume-launch,.dossier-lock,.dossier-group-toggle')]
+        .filter(button=>button.getClientRects().length).map(button=>({
+          button,bar:measureBox(button),box:measureBox(button.closest('.dossier-group') || button)
+        })),
       example:example ? measureBox(example) : null,
       soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
       focusBoxes:new Map(controls.filter(control=>control.getClientRects().length).map(control=>[control,measureBox(control)])),
-      staticWindows:[...root.querySelectorAll('.public-works-bar,.works-unlocked h3,.access-error h3')]
-        .filter(bar=>bar.getClientRects().length)
+      staticWindows:[...root.querySelectorAll('.public-works-bar,.access-error h3')]
+        .filter(bar=>!bar.closest('dialog') && bar.getClientRects().length)
         .map(bar=>({box:measureBox(bar.parentElement),bar:measureBox(bar)})),
       groups:disclosures.filter(button=>button.getClientRects().length).map(button=>({
         button,box:measureBox(button.closest('section')),bar:measureBox(button.parentElement)
@@ -218,11 +261,32 @@
         divider:divider ? measureBox(divider) : null
       } : null,
       actions:file ? [...file.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : [],
-      lock:worksLock.hidden ? null : {
+      lock:worksLock.hidden || worksLock.closest('dialog') ? null : {
         box:measureBox(worksLock),input:measureBox(worksPassword),button:measureBox(worksSubmit),
         symbol:measureBox(worksLock.querySelector('.works-lock-symbol'))
       }
     };
+  }
+
+  let cachedCardImage, cardPhoto;
+  function cardSignal(img) {
+    if (!img?.naturalWidth || !img.complete) return null;
+    if (img===cachedCardImage) return cardPhoto;
+    const scale = Math.min(1,1500/img.naturalWidth,1050/img.naturalHeight);
+    const output = document.createElement('canvas');
+    output.width = Math.max(1,Math.round(img.naturalWidth*scale));
+    output.height = Math.max(1,Math.round(img.naturalHeight*scale));
+    const target = output.getContext('2d',{willReadFrequently:true});
+    target.drawImage(img,0,0,output.width,output.height);
+    const pixels = target.getImageData(0,0,output.width,output.height);
+    const tone = Array.from({length:256},(_,i)=>Math.round(5+181*(i/255)**.76));
+    for (let i=0;i<pixels.data.length;i+=4) {
+      const value = tone[Math.round(.2126*pixels.data[i]+.7152*pixels.data[i+1]+.0722*pixels.data[i+2])];
+      pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;
+    }
+    target.putImageData(pixels,0,0);
+    cachedCardImage=img; cardPhoto=output;
+    return output;
   }
 
   function drawLabels(width,height) {
@@ -231,7 +295,7 @@
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
+    const {layout,cardLayout,dossierBars,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -254,6 +318,58 @@
         drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
       }
       for (const {box,bar} of staticWindows) drawWindow(box,bar,true,false);
+      for (const {button,bar,box} of dossierBars) {
+        if (button.classList.contains('dossier-lock')) outline(bar,highlighted(button) ? .65 : .35);
+        else drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
+      }
+      if (cardLayout) {
+        const {box,imageBox,frameBar,image,focusY,open,rail,tabs,play} = cardLayout;
+        outline(rail,.34);
+        for (const {button,box:tab} of tabs) {
+          const selected = button.getAttribute('aria-pressed')==='true';
+          if (!selected && !highlighted(button)) continue;
+          labelsCtx.fillStyle = '#fff';
+          labelsCtx.globalAlpha = selected ? .14 : .08;
+          labelsCtx.fillRect(tab.left,tab.top,tab.width,tab.height);
+          labelsCtx.globalAlpha = selected ? .75 : .40;
+          labelsCtx.fillRect(tab.left+6,tab.top+tab.height-1,Math.max(1,tab.width-12),1);
+        }
+        const plate = cardSignal(image);
+        if (plate && imageBox.width && imageBox.height) {
+          const ratio = Math.max(imageBox.width/plate.width,imageBox.height/plate.height);
+          const w = plate.width*ratio, h = plate.height*ratio;
+          labelsCtx.save();
+          labelsCtx.beginPath();
+          labelsCtx.rect(imageBox.left,imageBox.top,imageBox.width,imageBox.height);
+          labelsCtx.clip();
+          labelsCtx.globalAlpha = highlighted(open) ? 1 : .94;
+          labelsCtx.drawImage(plate,imageBox.left+(imageBox.width-w)/2,imageBox.top+(imageBox.height-h)*focusY,w,h);
+          labelsCtx.restore();
+        }
+        outline(box,highlighted(open) ? .76 : .43);
+        outline(imageBox,.34);
+        labelsCtx.globalAlpha = .42;
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.fillRect(frameBar.left,frameBar.top,frameBar.width,1);
+        if (play) {
+          const {box:key,symbol,time} = play;
+          const lit = highlighted(play.button);
+          labelsCtx.save();
+          labelsCtx.clearRect(key.left,key.top,key.width,key.height);
+          drawWindow(key,key,false,lit);
+          outline(key,lit ? 1 : .82);
+          outline(symbol,.65);
+          labelsCtx.globalAlpha = lit ? 1 : .93;
+          labelsCtx.beginPath();
+          labelsCtx.moveTo(symbol.left+symbol.width*.33,symbol.top+symbol.height*.22);
+          labelsCtx.lineTo(symbol.left+symbol.width*.79,symbol.top+symbol.height*.5);
+          labelsCtx.lineTo(symbol.left+symbol.width*.33,symbol.top+symbol.height*.78);
+          labelsCtx.fill();
+          labelsCtx.globalAlpha = .47;
+          labelsCtx.fillRect(time.left-.5,time.top,1,time.height);
+          labelsCtx.restore();
+        }
+      }
       for (const {tile,...box} of tiles) {
         if (highlighted(tile)) outline(box,.36);
       }
@@ -312,6 +428,9 @@
       labelsCtx.globalAlpha = fileText ? .91 : active ? .69 : descriptionHeading ? .74 : .56;
       const highlighted = label === document.activeElement || label.matches(':hover') ||
         label.closest('.file-tile')?.matches(':hover,:focus-visible');
+      if (label.matches('.dossier-card-kind,.dossier-card-enlarge,.dossier-card-caption,.dossier-lock,.dossier-project,.dossier-empty')) {
+        labelsCtx.globalAlpha = active ? .98 : .64;
+      }
       if (highlighted) {
         labelsCtx.globalAlpha = fileText ? 1 : .88;
         labelsCtx.shadowColor = '#fff';
@@ -319,6 +438,10 @@
       }
 
       for (const [index,line] of lines.entries()) {
+        if (label.classList.contains('dossier-card-name')) {
+          drawCardTitle(line,labelsCtx.font,parseFloat(fontSize),scaleX);
+          continue;
+        }
         if (index===lines.length-1 && active && label.matches('.list button')) {
           labelsCtx.fillText('>',line.left-labelsCtx.measureText('> ').width,line.middle);
         }
@@ -355,6 +478,90 @@
       }
     }
   }
+
+  let titleStamp;
+  function drawCardTitle(line,font,size,scale) {
+    // Rasterize the same phosphor cells as the archive heading, once per title and size.
+    const id = [line.text,font,scale].join('|');
+    if (titleStamp?.id!==id) {
+      const mask = document.createElement('canvas');
+      const pen = mask.getContext('2d',{willReadFrequently:true});
+      mask.width = Math.ceil((labelsCtx.measureText(line.text).width+5)*scale);
+      mask.height = Math.ceil(size*1.55*scale);
+      pen.scale(scale,scale);
+      pen.font = font; pen.fillStyle = '#fff'; pen.textBaseline = 'middle';
+      pen.fillText(line.text,1,mask.height/(2*scale));
+      const cells = document.createElement('canvas');
+      cells.width = mask.width; cells.height = mask.height;
+      drawPhosphorDots(cells.getContext('2d'),pen.getImageData(0,0,mask.width,mask.height).data,mask.width,mask.height,2.05*scale,0,0);
+      titleStamp = {id,cells};
+    }
+    const {cells} = titleStamp;
+    labelsCtx.drawImage(cells,line.left-1,line.middle-cells.height/(2*scale),cells.width/scale,cells.height/scale);
+  }
+
+  // The dossier's native HTML text uses the same phosphor cell as the CRT canvas.
+  const dossierCell = document.createElement('canvas');
+  dossierCell.width = dossierCell.height = 41;
+  drawPhosphorDots(dossierCell.getContext('2d'),new Uint8ClampedArray(41*41*4).fill(255),41,41,2.05,0,0);
+  root.style.setProperty('--dossier-phosphor-mask','url('+dossierCell.toDataURL()+')');
+
+  const dossierReader = find('#dossier-reader');
+  const headingDisplay = document.createElement('span');
+  headingDisplay.className = 'dossier-heading-screen';
+  headingDisplay.setAttribute('aria-hidden','true');
+  const headingSignal = document.createElement('canvas');
+  headingSignal.className = 'crt-signal';
+  headingDisplay.append(headingSignal);
+  let dossierHeadingReady = false;
+  function drawDossierHeading() {
+    const label = headingDisplay.parentElement;
+    if (!label || !headingDisplay.clientWidth) return headingSignal;
+    const density = Math.min(Math.max(1,devicePixelRatio),2.5);
+    headingSignal.width = Math.max(1, Math.round(headingDisplay.clientWidth*density));
+    headingSignal.height = Math.max(1, Math.round(headingDisplay.clientHeight*density));
+    const target = headingSignal.getContext('2d',{willReadFrequently:true});
+    const style = getComputedStyle(label);
+    const bounds = headingDisplay.getBoundingClientRect();
+    const xScale = headingSignal.width/bounds.width, yScale = headingSignal.height/bounds.height;
+    target.font = style.fontWeight+' '+parseFloat(style.fontSize)*density+'px '+style.fontFamily;
+    target.textBaseline = 'middle';
+    target.fillStyle = '#fff';
+    const text = label.firstChild;
+    const range = document.createRange();
+    for (const {index,segment} of graphemes.segment(text.data)) {
+      range.setStart(text,index);
+      range.setEnd(text,index+segment.length);
+      const box = range.getBoundingClientRect();
+      target.fillText(segment,(box.left-bounds.left)*xScale,(box.top+box.height/2-bounds.top)*yScale);
+    }
+    const pixels = target.getImageData(0,0,headingSignal.width,headingSignal.height);
+    target.clearRect(0,0,pixels.width,pixels.height);
+    drawPhosphorDots(target,pixels.data,pixels.width,pixels.height,2.05*density,0,0);
+    return headingSignal;
+  }
+  dossierReader.addEventListener('dossier-selection',()=>{
+    const label = dossierReader.querySelector('.dossier-title');
+    if (!label || (dossierHeadingReady && !headingDisplay.crtLive)) return;
+    headingDisplay.hidden = false;
+    label.append(headingDisplay);
+    if (!dossierHeadingReady) {
+      dossierHeadingReady = true;
+      window.createCrt(headingDisplay,{closeup:true});
+      if (!headingDisplay.crtLive) { headingDisplay.remove(); return; }
+      headingDisplay.crtLive.setScene(drawDossierHeading,false);
+      new ResizeObserver(()=>headingDisplay.crtLive.invalidate()).observe(headingDisplay);
+    }
+    if (headingDisplay.crtLive) {
+      label.classList.add('dossier-heading-live');
+      headingDisplay.crtLive.invalidate();
+    }
+  });
+  dossierReader.addEventListener('close',()=>{
+    headingDisplay.hidden = true;
+    headingDisplay.remove();
+    headingSignal.width = headingSignal.height = 1;
+  });
 
   function filmPerforations(count,pitch,width,height,top) {
     const path = new Path2D();
@@ -613,6 +820,7 @@
     const w = display.clientWidth;
     const h = display.clientHeight;
     if (w<2 || h<2) return;
+    controls = [...root.querySelectorAll(controlSelector)].filter(control=>!control.closest('dialog'));
     const screen = display.getBoundingClientRect();
     const box = panel.getBoundingClientRect();
     if (root.crtLive) {
@@ -701,6 +909,7 @@
     worksLock.hidden = !privateOpen || worksUnlocked;
     worksReady.hidden = !privateOpen || !worksUnlocked;
     if (worksLock.hidden) {
+      window.zoeaEntry?.hide();
       worksPassword.value = '';
       worksError = null;
     }
@@ -768,22 +977,21 @@
     }
     checkingPassword = true;
     try {
-      const buffer = await crypto.subtle.digest('SHA-256',new TextEncoder().encode(worksPassword.value));
-      const digest = Array.from(new Uint8Array(buffer),byte=>byte.toString(16).padStart(2,'0')).join('');
-      if (worksLock.hidden) return;
-      if (digest===worksToken) {
-        worksUnlocked = true;
-        try { sessionStorage.setItem(worksSessionKey,worksToken); } catch {}
-        updateContent();
-        privateToggle.focus({preventScroll:true});
-        document.dispatchEvent(new CustomEvent('zoea-access-result',{detail:{ok:true}}));
-        refreshPanel();
+      if (!window.crypto?.subtle) {
+        showAccessError('worksPasswordUnavailable','请通过 HTTPS 打开网站后再试。');
         return;
       }
-      showAccessError('worksIncorrect','密码不正确，请重试。');
-    } catch {
+      await window.zoeaDossier.unlock(worksPassword.value);
+      if (worksLock.hidden) { window.zoeaDossier.lock(); return; }
+      worksUnlocked = true;
+      updateContent();
+      find('.dossier-resume-launch').focus({preventScroll:true});
+      document.dispatchEvent(new CustomEvent('zoea-access-result',{detail:{ok:true}}));
+      refreshPanel();
+    } catch (error) {
       if (worksLock.hidden) return;
-      showAccessError('worksPasswordUnavailable','请通过 HTTPS 打开网站后再试。');
+      if (error.name==='OperationError') showAccessError('worksIncorrect','密码不正确，请重试。');
+      else showAccessError('worksArchiveUnavailable','档案暂时未能载入，请重试。');
     } finally {
       checkingPassword = false;
     }
@@ -817,8 +1025,8 @@
       target.drawImage(qqSource,0,0,size,size);
       const {data} = target.getImageData(0,0,size,size);
       target.clearRect(0,0,size,size);
-      // A faint continuous core preserves the contrast of each code module.
-      target.globalAlpha = .49;
+      // A steady core keeps the modules readable between the moving scanlines.
+      target.globalAlpha = .9;
       target.drawImage(qqSource,0,0,size,size);
       target.globalAlpha = 1;
       drawPhosphorDots(target,data,size,size,2.05*density,0,0);
@@ -828,8 +1036,7 @@
   }
   qqSource.addEventListener('load',initializeQqDisplay);
 
-  function bindPreview(dialog, surface, openers, tiltScale, afterOpen) {
-    let closing;
+  function bindGlassTilt(dialog, surface, tiltScale, isClosing=()=>false) {
     let pointerFrame = 0;
     function setTilt(x,y) {
       const gain = geometry.tilt*tiltScale;
@@ -842,16 +1049,8 @@
       cancelAnimationFrame(pointerFrame);
       setTilt(0,0);
     }
-    function reset() {
-      closing?.cancel();
-      closing = null;
-      resetTilt();
-    }
-    function cue(open) {
-      root.dispatchEvent(new CustomEvent('crt-dialog-toggle',{bubbles:true,detail:open}));
-    }
     dialog.addEventListener('pointermove',event=>{
-      if (closing || reduced.matches || event.pointerType==='touch') return;
+      if (isClosing() || reduced.matches || event.pointerType==='touch') return;
       cancelAnimationFrame(pointerFrame);
       const {clientX,clientY} = event;
       pointerFrame = requestAnimationFrame(()=>{
@@ -863,11 +1062,25 @@
     dialog.addEventListener('pointerleave',resetTilt);
     reduced.addEventListener('change',resetTilt);
     geometry.compactTouch.addEventListener('change',resetTilt);
+    return {resetTilt,cancelTilt:()=>cancelAnimationFrame(pointerFrame)};
+  }
+
+  function bindPreview(dialog, surface, openers, tiltScale, afterOpen) {
+    let closing;
+    const glass = bindGlassTilt(dialog,surface,tiltScale,()=>Boolean(closing));
+    function reset() {
+      closing?.cancel();
+      closing = null;
+      glass.resetTilt();
+    }
+    function cue(open) {
+      root.dispatchEvent(new CustomEvent('crt-dialog-toggle',{bubbles:true,detail:open}));
+    }
 
     function dismiss(event) {
       event.preventDefault();
       if (!dialog.open || closing) return;
-      cancelAnimationFrame(pointerFrame);
+      glass.cancelTilt();
       cue(false);
       if (reduced.matches) {
         dialog.close();
@@ -880,16 +1093,15 @@
       ],{duration:155,easing:'ease-in',fill:'forwards'});
       closing.finished.then(()=>dialog.close(),()=>{});
     }
-    for (const opener of openers) {
-      opener.addEventListener('click',()=>{
-        if (dialog.open) return;
-        reset();
-        dialog.showModal();
-        surface.scrollTop = 0;
-        afterOpen?.();
-        cue(true);
-      });
+    function open() {
+      if (dialog.open) return;
+      reset();
+      dialog.showModal();
+      surface.scrollTop = 0;
+      afterOpen?.();
+      cue(true);
     }
+    for (const opener of openers) opener.addEventListener('click',open);
     dialog.addEventListener('submit',dismiss);
     dialog.addEventListener('cancel',dismiss);
     dialog.addEventListener('click',event=>{
@@ -898,8 +1110,26 @@
     dialog.addEventListener('close',()=>{
       if (!dialog.open) reset();
     });
+    return open;
   }
   bindPreview(qqDialog,qqGlass,[qqButton],1,initializeQqDisplay);
+  const entryWindow = find('#dossier-entry');
+  const entryGlass = entryWindow?.querySelector('.preview-glass');
+  if (entryGlass) {
+    const entryTilt = bindGlassTilt(entryWindow,entryGlass,.72);
+    entryWindow.addEventListener('close',entryTilt.resetTilt);
+  }
+  const dossierImage = find('#dossier-lightbox');
+  window.bindDossierCurve(dossierReader);
+  window.bindDossierCurve(dossierImage,.52);
+  const inspector = find('#dossier-zoom');
+  window.bindDossierCurve(inspector,.36);
+  const inspectorTilt = bindGlassTilt(inspector,inspector.querySelector('.preview-glass'),.24);
+  inspector.addEventListener('close',inspectorTilt.resetTilt);
+  window.zoeaDossier.bindWindows(
+    bindPreview(dossierReader,dossierReader.querySelector('.preview-glass'),[],.48),
+    bindPreview(dossierImage,dossierImage.querySelector('.preview-glass'),[],.43)
+  );
   function populateAssetViewer(example) {
     const {viewerKey,viewerTitle} = example.dataset;
     assetViewer.querySelector('h2').textContent = window.zoeaLocale.text(viewerKey,viewerTitle);
@@ -939,11 +1169,12 @@
     if (event.detail!=='about' && qqDialog.open) {
       qqDialog.close();
     }
-    if (event.detail==='home') return;
+    if (event.detail==='home') { window.zoeaEntry?.hide(); return; }
     const [,category,fileId] = event.detail.split('/');
     const previous = current, previousCategory = selected, previousFile = openFile;
     current = event.detail==='about' ? 'about' : 'project';
     if (category) selected = [...list.children].findIndex(button=>button.dataset.category===category);
+    if (event.detail==='projects/works/private') privateToggle.setAttribute('aria-expanded','true');
     openFile = fileDetails.get(fileId) ?? null;
     if (openFile && category==='tools') {
       const tile = fileTiles.find(link=>link.hash==='#'+event.detail);
@@ -952,6 +1183,7 @@
     }
     if (previousFile!==openFile) window.scrollTo(0,0);
     updateContent();
+    if (event.detail==='projects/works/private' && !worksUnlocked) window.zoeaEntry?.show();
     const changed = previous!==current || previousCategory!==selected || previousFile!==openFile;
     if (changed && root.crtEntryTime?.(performance.now()) < 0) refreshPanel();
   });
@@ -959,9 +1191,44 @@
     button.addEventListener('click',()=>{
       button.setAttribute('aria-expanded',String(button.getAttribute('aria-expanded')!=='true'));
       updateContent();
+      if (button===privateToggle && !worksLock.hidden) window.zoeaEntry?.show();
     });
   }
   document.addEventListener('zoea-language-change',updateContent);
+  root.addEventListener('dossier-lock',()=>{
+    cachedCardImage = cardPhoto = titleStamp = null;
+    worksUnlocked = false;
+    updateContent();
+    if (!worksLock.hidden) window.zoeaEntry?.show();
+    worksPassword.focus();
+  });
+  root.addEventListener('dossier-entry-dismiss',()=>{
+    privateToggle.setAttribute('aria-expanded','false');
+    updateContent();
+    privateToggle.focus({preventScroll:true});
+  });
+  window.zoeaDossier.restore().then(restored=>{
+    if (!restored || worksUnlocked) return;
+    worksUnlocked = true;
+    updateContent();
+  });
+  let dossierRenderFrame = 0, revealCard = false;
+  root.addEventListener('dossier-layout',event=>{
+    revealCard ||= event.detail.reveal;
+    if (dossierRenderFrame) return;
+    dossierRenderFrame = requestAnimationFrame(()=>{
+      dossierRenderFrame = 0;
+      const reveal = revealCard;
+      revealCard = false;
+      if (worksReady.hidden || root.hidden || !worksReady.getClientRects().length) return;
+      render();
+      if (reveal && root.crtLive && labelLayout?.cardLayout) {
+        const {left,top,width,height} = labelLayout.cardLayout.box;
+        const w = display.clientWidth, h = display.clientHeight;
+        root.crtLive.refreshPanel([left/w,top/h,(left+width)/w,(top+height)/h]);
+      }
+    });
+  });
   document.addEventListener('zoea-input-change',()=>{
     find('.key-guide').hidden = document.documentElement.dataset.input!=='keyboard';
     if (!root.hidden) render();
@@ -975,7 +1242,7 @@
     });
   });
   function updateLabelHighlight(event) {
-    if (!root.crtLive || !event.target.closest(controlSelector)) return;
+    if (root.hidden || !root.crtLive || !event.target.closest(controlSelector)) return;
     refreshLabels?.();
     root.crtLive.invalidate();
   }

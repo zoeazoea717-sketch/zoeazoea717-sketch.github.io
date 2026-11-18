@@ -1,0 +1,356 @@
+#zoea-archive #dossier-entry {
+  --entry-line: #b5753c99;
+  --entry-glow: #f3913e66;
+  --preview-distance: max(1000px, 115vw);
+  --rest-x: .75deg;
+  --rest-y: -1.3deg;
+  position: fixed;
+  inset: 0;
+  /* Allow the tilted glass to extend beyond its rest position on either side. */
+  width: min(1142px, calc(100vw - 40px));
+  max-width: none;
+  height: fit-content;
+  max-height: calc(100vh - 56px);
+  max-height: calc(100dvh - 56px);
+  margin: auto;
+  padding: 8px 24px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #a16735 #1a0c04;
+  color: var(--pale);
+  background: transparent;
+  border: 0;
+  font-family: var(--terminal-font);
+  text-align: left;
+  color-scheme: dark;
+}
+#zoea-archive #dossier-entry::backdrop {
+  background: radial-gradient(ellipse at center, #10090532 8%, #10090572 65%, #100905a8);
+}
+#zoea-archive #dossier-entry .entry-sheet {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--entry-line);
+  background: #1c0d05;
+  box-shadow: 0 0 7px #d47b3745, 0 8px 30px #10080455;
+}
+#dossier-entry .entry-sheet::after, #dossier-lightbox .dossier-plane::after, #dossier-zoom .dossier-inspector-frame::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  border: 1px solid #ef98558a;
+  clip-path: polygon(0 0,9% 0,9% 1%,91% 1%,91% 0,100% 0,100% 13%,99.4% 13%,99.4% 87%,100% 87%,100% 100%,91% 100%,91% 99%,9% 99%,9% 100%,0 100%,0 87%,.6% 87%,.6% 13%,0 13%);
+}
+#zoea-archive #dossier-entry .access-error .file-bar {
+  background:
+    linear-gradient(104deg, transparent 15%, #f7a05d27 20%, transparent 25%),
+    repeating-linear-gradient(0deg, #eb99432b 0 1px, #501f0b35 1px 3px, #93491c3a 3px 4px),
+    linear-gradient(90deg, #582a104f, #813b144f 50%, #5e2d1040);
+  border-bottom: 1px solid #c58549ab;
+  box-shadow: inset 0 1px #d48e4e70, 0 1px 5px #ee8c393d;
+}
+#dossier-entry .entry-toolbar {
+  display: flex;
+  align-items: center;
+  min-height: 45px;
+  gap: clamp(12px, 1.6vw, 22px);
+  padding: 0 8px 0 clamp(16px, 2.7vw, 37px);
+  color: var(--pale);
+  text-shadow: 0 0 3px #ffb16b, 0 0 8px var(--entry-glow);
+}
+#dossier-entry .entry-signature {
+  font: 700 16px/1 var(--terminal-font);
+  letter-spacing: .1em;
+  color: var(--gold);
+}
+#dossier-entry .entry-toolbar-title {
+  padding-left: clamp(12px, 1.4vw, 20px);
+  border-left: 1px solid #d09055a3;
+  font: 700 15px/1.1 var(--terminal-font);
+}
+#zoea-archive #dossier-entry .entry-close {
+  margin-left: auto;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pale);
+  cursor: pointer;
+}
+#zoea-archive #dossier-entry .entry-close:hover span { filter: drop-shadow(0 0 5px #ffa65b); }
+#dossier-entry .entry-layout {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-areas: "heading landscape" "form landscape";
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.12fr);
+  align-content: center;
+  column-gap: clamp(24px, 4.8vw, 72px);
+  row-gap: clamp(30px, 4.8vh, 49px);
+  min-height: clamp(410px, 52vh, 540px);
+  padding: clamp(38px, 4.8vw, 66px) clamp(30px, 5vw, 72px);
+}
+#dossier-entry .entry-layout::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 11px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, #dd88322b 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(0deg, #dd883223 0 1px, transparent 1px 20%);
+  mask-image: radial-gradient(ellipse at center, #000 8%, transparent 78%);
+}
+#dossier-entry .entry-heading {
+  grid-area: heading;
+  z-index: 1;
+  align-self: end;
+  min-width: 0;
+}
+#dossier-entry .entry-path {
+  display: block;
+  margin-bottom: 13px;
+  color: #cf9b64;
+  font: 700 12px/1.3 var(--terminal-font);
+  letter-spacing: .035em;
+  text-shadow: 0 0 3px #ffa45882;
+}
+#dossier-entry .entry-title-beam {
+  filter: drop-shadow(0 0 1px #ffe2a4c0) drop-shadow(0 0 4px #ff811f65);
+}
+#zoea-archive #dossier-entry h2 {
+  margin: 0;
+  font: 700 clamp(43px, 4.7vw, 68px)/1.16 var(--terminal-font);
+  letter-spacing: .015em;
+  text-wrap: balance;
+}
+html:lang(en) #zoea-archive #dossier-entry h2 {
+  font-size: clamp(41px, 4.15vw, 60px);
+  letter-spacing: -.045em;
+}
+#dossier-entry .entry-heading h2:focus { outline: none; }
+#dossier-entry .entry-landscape {
+  position: absolute;
+  z-index: 0;
+  inset: 2% -1px 1% 30.5%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  mask-image: linear-gradient(90deg, transparent, #0005 12%, #000d 28%, #000 38% 100%),
+    linear-gradient(0deg, transparent, #000b 15%, #000 31% 90%, transparent);
+  mask-composite: intersect;
+}
+#zoea-archive #dossier-entry .entry-landscape canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
+  filter: url("#entry-terrain-tone") drop-shadow(0 0 1.1px #ff9e4555);
+}
+#dossier-entry .entry-tones { position: absolute; pointer-events: none; }
+#dossier-entry .entry-form-slot { grid-area: form; z-index: 1; align-self: start; min-width: 0; }
+#zoea-archive #dossier-entry .works-lock:not([hidden]) {
+  display: grid;
+  grid-template-areas: "label label" "fields fields" "hint contact" "error error";
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 10px;
+  width: min(100%, 408px);
+  justify-self: start;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--terminal-font);
+}
+#zoea-archive #dossier-entry .works-lock[hidden],
+#zoea-archive #dossier-entry .works-lock-title,
+#zoea-archive #dossier-entry .access-error[hidden] { display: none; }
+#zoea-archive #dossier-entry :is([data-works-text], [data-file-text]) {
+  color: var(--pale);
+  -webkit-text-fill-color: currentColor;
+  text-shadow: 0 0 3px #ffae6490, 0 0 7px #e7894338;
+}
+#zoea-archive #dossier-entry .works-lock :is(input, button, a) {
+  transform: none !important;
+  transform-origin: center !important;
+  touch-action: manipulation;
+}
+#zoea-archive #dossier-entry .works-lock > label {
+  grid-area: label;
+  margin: 0 0 9px;
+  color: #e5b382;
+  font: 500 14px/1.4 var(--terminal-font);
+}
+#zoea-archive #dossier-entry .works-lock-fields {
+  grid-area: fields;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+#zoea-archive #dossier-entry .works-lock-fields :is(input, button) {
+  min-height: 46px;
+  border: 1px solid #bd7c40cb;
+  border-radius: 0;
+  color: var(--pale);
+  -webkit-text-fill-color: currentColor;
+  background: #1b0c0366;
+  box-shadow: inset 0 0 5px #ed883522, 0 0 4px #e17a322f;
+}
+#zoea-archive #dossier-entry .works-lock-fields input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 13px;
+  caret-color: var(--gold);
+  font: 16px/1.4 var(--terminal-font);
+  letter-spacing: .15em;
+  text-shadow: 0 0 4px #ff9f5490;
+}
+#zoea-archive #dossier-entry .works-lock-fields input:focus {
+  border-color: #f0ab62;
+  outline: 1px solid #b47744;
+  outline-offset: -4px;
+}
+#zoea-archive #dossier-entry .entry-password-frame {
+  --entry-input-margin: 0px;
+  position: relative;
+  min-width: 0;
+  min-height: 46px;
+  border: 1px solid #bd7c40cb;
+  background: #1b0c0366;
+  box-shadow: inset 0 0 5px #ed883522, 0 0 4px #e17a322f;
+}
+#zoea-archive #dossier-entry .entry-password-frame[data-dossier-native-active] {
+  --entry-input-margin: clamp(12px, 2.2vw, 28px);
+}
+#zoea-archive #dossier-entry .entry-password-frame:focus-within {
+  border-color: #f0ab62;
+  outline: 1px solid #b47744;
+  outline-offset: -4px;
+}
+#zoea-archive #dossier-entry .entry-password-frame > input {
+  position: absolute;
+  inset: calc(-1px - var(--entry-input-margin));
+  width: calc(100% + 2px + 2 * var(--entry-input-margin));
+  height: calc(100% + 2px + 2 * var(--entry-input-margin));
+  min-height: 0;
+  padding: 0 calc(14px + var(--entry-input-margin));
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  clip-path: var(--dossier-native-clip, none);
+}
+#zoea-archive #dossier-entry .works-lock-fields button {
+  min-width: 64px;
+  padding: 6px 13px;
+  font: 700 14px/1.3 var(--terminal-font);
+  cursor: pointer;
+}
+#zoea-archive #dossier-entry .works-lock-fields button:hover {
+  background: #8a4a1d55;
+  border-color: var(--gold);
+}
+#zoea-archive #dossier-entry #zoea-works-access-hint {
+  grid-area: hint;
+  align-self: center;
+  margin: 9px 0 0;
+  color: #d6a475;
+  font-size: 12px;
+  line-height: 1.55;
+}
+#zoea-archive #dossier-entry .works-lock .file-source {
+  grid-area: contact;
+  justify-self: end;
+  align-self: start;
+  min-height: 36px;
+  margin: 5px 0 0;
+  padding: 3px 0;
+  color: #edbc83;
+  font: 400 12px/1.5 var(--terminal-font);
+}
+#zoea-archive #dossier-entry .access-error {
+  grid-area: error;
+  margin-top: 10px;
+  padding: 0 0 8px;
+  border: 1px solid var(--entry-line);
+  background: #2310054d;
+}
+#zoea-archive #dossier-entry .access-error .file-bar {
+  display: block;
+  margin: 0;
+  padding: 5px 11px;
+  font: 700 13px/1.3 var(--terminal-font);
+}
+#zoea-archive #dossier-entry #zoea-works-access-status {
+  display: inline-block;
+  margin: 8px 0 3px 11px;
+  padding: 0;
+  font-size: 13px;
+}
+#zoea-archive #dossier-entry .access-error .retry-access {
+  display: inline;
+  min-height: 26px;
+  margin: 3px 7px;
+  padding: 2px 5px;
+  border: 1px solid var(--entry-line);
+  background: transparent;
+  font-size: 12px;
+  text-underline-offset: .2em;
+}
+#zoea-archive #dossier-entry :is(button, a):focus-visible {
+  outline: 2px dotted var(--gold);
+  outline-offset: 2px;
+}
+@media (max-width: 729px) {
+  #zoea-archive #dossier-entry {
+    --rest-x: .15deg;
+    --rest-y: -.25deg;
+    width: min(490px, calc(100vw - 14px));
+    max-height: calc(100vh - 12px);
+    max-height: calc(100dvh - 12px);
+    padding: 4px;
+  }
+  #dossier-entry .entry-toolbar { min-height: 41px; padding-inline: 15px 4px; }
+  #dossier-entry .entry-signature { font-size: 14px; }
+  #dossier-entry .entry-toolbar-title { font-size: 13px; }
+  #dossier-entry .entry-layout {
+    grid-template-areas: "heading" "landscape" "form";
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    min-height: 0;
+    padding: 21px clamp(17px, 5.4vw, 30px) 19px;
+  }
+  #dossier-entry .entry-path { margin-bottom: 8px; font-size: 10px; }
+  #zoea-archive #dossier-entry h2 { font-size: clamp(40px, 10.2vw, 57px); }
+  html:lang(en) #zoea-archive #dossier-entry h2 { font-size: clamp(31px, 8.3vw, 46px); }
+  #dossier-entry .entry-landscape {
+    position: relative;
+    grid-area: landscape;
+    inset: auto;
+    height: clamp(163px, 43vw, 208px);
+    margin: 2px calc(-1 * clamp(17px, 5.4vw, 30px)) 5px;
+    mask-image: linear-gradient(0deg, transparent, #000 20% 88%, transparent);
+  }
+  #zoea-archive #dossier-entry .works-lock:not([hidden]) { width: 100%; }
+}
+@media (max-width: 729px) and (max-height: 585px) {
+  #dossier-entry .entry-layout { padding-block: 14px 12px; }
+  #dossier-entry .entry-landscape { height: 113px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  #dossier-entry[open] .entry-sheet { animation: dossier-entry-reveal 170ms ease-out; }
+  @keyframes dossier-entry-reveal {
+    from { opacity: .55; }
+    to { opacity: 1; }
+  }
+}
+@media (prefers-reduced-motion: reduce), (hover: none) and (pointer: coarse) {
+  #zoea-archive #dossier-entry { --rest-x: 0deg; --rest-y: 0deg; }
+}
+
