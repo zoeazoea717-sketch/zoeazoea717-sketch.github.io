@@ -257,35 +257,35 @@
     #zoea-archive .film-pair { grid-template-columns:1fr; }
   }
   #film-viewer {
-    box-sizing:border-box; width:min(92vw,1700px); max-width:calc(100% - 16px);
-    max-height:none; padding:0; overflow:visible; border:0; background:transparent; color:#ffdbab;
+    width:min(92vw,1700px); max-width:calc(100% - 16px); max-height:none;
+    --preview-distance:max(900px,105vw); --rest-x:1.4deg; --rest-y:-3deg;
   }
-  #film-viewer::backdrop { background:#0a0908df; }
   #film-viewer .film-glass {
-    --rest-x:.9deg; --rest-y:-2.4deg;
     max-height:88dvh; overflow:auto; overscroll-behavior:contain;
-    background:#141414; border:1px solid #d2955b; box-shadow:0 0 9px #e4a05d36;
-    transform:perspective(max(900px,110vw)) rotateX(calc(var(--rest-x) + var(--dialog-tilt-x,0deg))) rotateY(calc(var(--rest-y) + var(--dialog-tilt-y,0deg)));
+    scrollbar-color:#997046 #1b100a;
   }
-  @media (prefers-reduced-motion:no-preference) {
-    #film-viewer[open] .film-glass {
-      animation:crt-expose 260ms ease-out; transition:transform 135ms ease-out;
-    }
+  #film-viewer .film-plane {
+    padding:clamp(10px,1.6vw,26px) clamp(12px,2.2vw,36px);
+    background:
+      linear-gradient(90deg,transparent,#e7a05b9c 18%,#f9c289 52%,#e7a05b9c 82%,transparent) center 2.5% / 94% 1px no-repeat,
+      linear-gradient(90deg,transparent,#c7895288 22%,#edb078a6 50%,#c7895288 78%,transparent) center 97.5% / 94% 1px no-repeat,
+      radial-gradient(ellipse at center,#1b1009fa 30%,#20130dea 68%,#1a1009b0 89%,transparent);
+    filter:url(#film-screen-curve);
   }
+  .preview-filter { position:absolute; pointer-events:none; }
   @media (max-width:640px), (pointer:coarse) {
-    #film-viewer { width:95vw; }
-    #film-viewer .film-glass { --rest-x:.35deg; --rest-y:-.65deg; }
+    #film-viewer { width:95vw; --rest-x:.35deg; --rest-y:-.65deg; }
   }
   #film-viewer .film-viewer-bar {
     position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between;
-    gap:.8em; padding:0 clamp(10px,1.4vw,22px); border-bottom:1px solid #916641;
-    background:repeating-linear-gradient(0deg,#2b1d14 0 1px,#302017 1px 4px);
+    gap:.8em; padding:0 4px; margin-bottom:.4em;
+    background:linear-gradient(90deg,transparent,#1c110be8 8%,#1c110be8 92%,transparent);
   }
   #film-viewer h2 { margin:0; font-size:clamp(15px,1.4vw,22px); }
-  #zoea-archive #film-viewer button { padding-inline:.7em; color:#ffe1b6; cursor:pointer; }
-  #film-viewer .film-pair { align-items:start; padding:clamp(8px,1.3vw,20px); }
+  #film-viewer :is(h2,figcaption) { color:#ffcf96; text-shadow:0 0 4px #e9a35d99; }
+  #film-viewer .film-pair { align-items:start; }
   #film-viewer img { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:contain; background:#101010; }
-  #zoea-archive #film-viewer figcaption { padding-top:.25em; color:#e0cdb8; font-size:clamp(14px,1.1vw,18px); }
+  #zoea-archive #film-viewer figcaption { padding-top:.25em; font-size:clamp(14px,1.1vw,18px); }
   @media (max-width:640px) {
     #zoea-archive #film-viewer .film-pair { grid-template-columns:1fr; }
   }
@@ -327,24 +327,27 @@
     filter:invert(.20) sepia(.67) saturate(2.5) drop-shadow(0 0 3px #ed9a5890);
   }
   #zoea-archive .about-contact.crt-icon-ready img { opacity:0; }
-  #zoea-archive .qq-dialog {
-    --code-size:min(340px, 74vw, calc(100dvh - 104px));
-    max-width:calc(100vw - 20px); max-height:calc(100dvh - 18px);
+  #zoea-archive .preview-dialog {
     padding:0; border:0; background:transparent; color:var(--pale);
     overflow:visible;
   }
-  #zoea-archive .qq-dialog::backdrop {
+  #zoea-archive .qq-dialog {
+    --code-size:min(340px, 74vw, calc(100dvh - 104px));
+    max-width:calc(100vw - 20px); max-height:calc(100dvh - 18px);
+  }
+  #zoea-archive .preview-dialog::backdrop {
     background:radial-gradient(ellipse at center,#10090538 10%,#1009058f 65%,#100905be);
   }
-  #zoea-archive .qq-glass {
+  #zoea-archive .preview-glass {
     position:relative; isolation:isolate;
-    padding:6px 14px 14px;
+    transform:perspective(var(--preview-distance,760px)) rotateX(calc(var(--rest-x,0deg) + var(--dialog-tilt-x,0deg))) rotateY(calc(var(--rest-y,0deg) + var(--dialog-tilt-y,0deg)));
   }
-  #zoea-archive .qq-glass::before {
+  #zoea-archive .qq-glass { padding:6px 14px 14px; }
+  #zoea-archive .preview-glass::before {
     content:""; position:absolute; inset:1px; pointer-events:none;
     background:
       linear-gradient(90deg,transparent,#ffc687ad 22%,#ffdca9 50%,#ffc687ad 78%,transparent) center / 0 1px no-repeat,
-      radial-gradient(ellipse at var(--qq-light-x,50%) var(--qq-light-y,50%),#ffb46b16,transparent 58%);
+      radial-gradient(ellipse at var(--preview-light-x,50%) var(--preview-light-y,50%),#ffb46b16,transparent 58%);
     mix-blend-mode:screen;
     mask-image:
       linear-gradient(90deg,transparent,#000 16%,#000 84%,transparent),
@@ -352,10 +355,10 @@
     mask-composite:intersect;
   }
   #zoea-archive .qq-dialog form { display:flex; justify-content:flex-end; margin-bottom:4px; }
-  #zoea-archive .qq-dialog button {
-    display:grid; place-items:center; width:38px; min-height:38px; cursor:pointer;
+  #zoea-archive .preview-close {
+    display:grid; place-items:center; width:44px; min-height:44px; cursor:pointer;
   }
-  #zoea-archive .qq-dialog button span {
+  #zoea-archive .preview-close span {
     width:15px; height:15px;
     color:#ffca8b;
     background:
@@ -378,14 +381,13 @@
   #zoea-archive .qq-code .crt-signal[hidden] { display:none; }
   #zoea-archive .qq-code > .crt-live { position:absolute; inset:0; pointer-events:none; }
   @media (prefers-reduced-motion:no-preference) {
-    #zoea-archive .qq-dialog[open] .qq-glass {
-      animation:crt-expose 260ms ease-out both;
-      transform:perspective(760px) rotateX(var(--dialog-tilt-x,0deg)) rotateY(var(--dialog-tilt-y,0deg));
+    #zoea-archive .preview-dialog[open] .preview-glass {
+      animation:crt-expose 260ms ease-out;
       transition:transform 135ms ease-out;
     }
-    #zoea-archive .qq-dialog[open] .qq-code { animation:qq-write 160ms 65ms linear both; }
-    #zoea-archive .qq-dialog[open] .qq-glass::before { animation:qq-line 105ms ease-out both; }
-    #zoea-archive .qq-dialog[open] .qq-glass::after {
+    #zoea-archive .preview-dialog[open] :is(.qq-code,.film-pair) { animation:qq-write 160ms 65ms linear both; }
+    #zoea-archive .preview-dialog[open] .preview-glass::before { animation:qq-line 105ms ease-out both; }
+    #zoea-archive .preview-dialog[open] .preview-glass::after {
       content:""; position:absolute; inset:0; pointer-events:none;
       background:linear-gradient(90deg,transparent 40%,#ffba7266 50%,transparent 60%) -30% 0 / 24% 100% no-repeat;
       animation:qq-sweep 190ms 60ms linear both;

@@ -833,10 +833,8 @@
       const gain = geometry.tilt*tiltScale;
       surface.style.setProperty('--dialog-tilt-x',`${-y*4.2*gain}deg`);
       surface.style.setProperty('--dialog-tilt-y',`${x*5.1*gain}deg`);
-      if (dialog===qqDialog) {
-        surface.style.setProperty('--qq-light-x',`${50+x*39}%`);
-        surface.style.setProperty('--qq-light-y',`${50+y*39}%`);
-      }
+      surface.style.setProperty('--preview-light-x',`${50+x*39}%`);
+      surface.style.setProperty('--preview-light-y',`${50+y*39}%`);
     }
     function resetTilt() {
       cancelAnimationFrame(pointerFrame);
@@ -900,7 +898,27 @@
     });
   }
   bindPreview(qqDialog,qqGlass,[qqButton],1,initializeQqDisplay);
-  bindPreview(filmViewer,filmViewer.querySelector('.film-glass'),filmExample.querySelectorAll('.film-thumb'),.56);
+  const filmPlane = filmViewer.querySelector('.film-plane');
+  const filmCurve = find('#film-screen-curve');
+  function setFilmCurve() {
+    const width = filmPlane.offsetWidth, height = filmPlane.offsetHeight;
+    if (!width || !height) return;
+    const longest = Math.max(width,height);
+    const map = filmCurve.querySelector('feImage');
+    map.setAttribute('width',width);
+    map.setAttribute('height',height);
+    // R/G encode the shared glassX/glassY offsets. Convert each axis to its own pixel extent.
+    for (const [channel,size] of [['feFuncR',width],['feFuncG',height]]) {
+      const slope = size/longest;
+      const fn = filmCurve.querySelector(channel);
+      fn.setAttribute('slope',slope);
+      fn.setAttribute('intercept',(1-slope)/2);
+    }
+    filmCurve.querySelector('feDisplacementMap').setAttribute('scale',longest*.036*geometry.bend);
+  }
+  new ResizeObserver(setFilmCurve).observe(filmPlane);
+  geometry.compactTouch.addEventListener('change',setFilmCurve);
+  bindPreview(filmViewer,filmViewer.querySelector('.film-glass'),filmExample.querySelectorAll('.film-thumb'),.82,setFilmCurve);
 
   root.addEventListener('crt-view',event=>{
     if (filmViewer.open && event.detail!=='projects/tools/film-scan-helper') filmViewer.close();

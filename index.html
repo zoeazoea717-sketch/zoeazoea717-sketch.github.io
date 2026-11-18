@@ -7,14 +7,14 @@
   <title>ZOEA</title>
   <link rel="stylesheet" href="./assets/site.css?v=works-keyboard">
   <link rel="stylesheet" href="./assets/home.css?v=works-access">
-  <link rel="stylesheet" href="./assets/archive.css?v=film-preview-glass">
+  <link rel="stylesheet" href="./assets/archive.css?v=shared-preview-crt">
   <script defer src="./assets/language.js?v=film-comparison"></script>
   <script defer src="./assets/motion.js?v=works-access"></script>
   <script defer src="./assets/shell.js?v=works-keyboard"></script>
   <script defer src="./assets/terrain.js"></script>
   <script defer src="./assets/sound.js?v=film-comparison"></script>
   <script defer src="./assets/home.js?v=works-access"></script>
-  <script defer src="./assets/archive.js?v=film-preview-glass"></script>
+  <script defer src="./assets/archive.js?v=shared-preview-crt"></script>
   <script defer src="./assets/keyboard.js?v=film-comparison"></script>
 </head>
 <body>
@@ -233,31 +233,45 @@
       <span class="key-guide" data-file-text data-i18n="keyGuide" hidden>Tab / 方向键 选择 · Enter 打开 · Esc 返回</span>
     </div>
   </main>
-  <dialog id="zoea-qq" class="qq-dialog" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
-    <div class="qq-glass">
-      <form method="dialog"><button type="submit" aria-label="关闭二维码" data-i18n-label="closeQq" autofocus><span aria-hidden="true"></span></button></form>
+  <dialog id="zoea-qq" class="preview-dialog qq-dialog" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
+    <div class="preview-glass qq-glass">
+      <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭二维码" data-i18n-label="closeQq" autofocus><span aria-hidden="true"></span></button></form>
       <div class="qq-code" role="img" aria-label="QQ 联系二维码" data-i18n-label="qqCode">
         <img class="crt-signal" src="./assets/qq-code.svg" alt="" width="340" height="340">
       </div>
     </div>
   </dialog>
-  <dialog id="film-viewer" aria-labelledby="film-viewer-title">
-    <div class="film-glass">
-      <div class="film-viewer-bar">
-        <h2 id="film-viewer-title" data-i18n="filmViewer">黑白实拍对照 · v2.2</h2>
-        <form method="dialog"><button type="submit" autofocus data-i18n="filmClose">关闭</button></form>
-      </div>
-      <div class="film-pair">
-        <figure>
-          <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
-          <figcaption data-i18n="filmBefore">翻拍负片</figcaption>
-        </figure>
-        <figure>
-          <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
-          <figcaption data-i18n="filmAfter">自动输出</figcaption>
-        </figure>
+  <dialog id="film-viewer" class="preview-dialog" aria-labelledby="film-viewer-title">
+    <div class="preview-glass film-glass">
+      <div class="film-plane">
+        <div class="film-viewer-bar">
+          <h2 id="film-viewer-title" data-i18n="filmViewer">黑白实拍对照 · v2.2</h2>
+          <form method="dialog"><button class="preview-close" type="submit" aria-label="关闭" data-i18n-label="filmClose" autofocus><span aria-hidden="true"></span></button></form>
+        </div>
+        <div class="film-pair">
+          <figure>
+            <img src="./assets/film-negative-sample.jpg" width="828" height="552" loading="lazy" alt="楼宇阳台的翻拍负片，上下可见片夹" data-i18n-alt="filmBeforeAlt">
+            <figcaption data-i18n="filmBefore">翻拍负片</figcaption>
+          </figure>
+          <figure>
+            <img src="./assets/film-positive-sample.jpg" width="828" height="534" loading="lazy" alt="同一画幅转正后的建筑，片夹边缘已裁去" data-i18n-alt="filmAfterAlt">
+            <figcaption data-i18n="filmAfter">自动输出</figcaption>
+          </figure>
+        </div>
       </div>
     </div>
+    <svg class="preview-filter" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="film-screen-curve" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+          <feImage href="./assets/preview-curvature.png" preserveAspectRatio="none" result="curve"></feImage>
+          <feComponentTransfer in="curve" result="scaled-curve">
+            <feFuncR type="linear"></feFuncR>
+            <feFuncG type="linear"></feFuncG>
+          </feComponentTransfer>
+          <feDisplacementMap in="SourceGraphic" in2="scaled-curve" scale="0" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+        </filter>
+      </defs>
+    </svg>
   </dialog>
 </section>
 </div>
