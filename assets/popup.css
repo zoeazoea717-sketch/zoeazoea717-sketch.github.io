@@ -1,10 +1,18 @@
-html:has(dialog.preview-dialog[open]) { overflow: hidden; }
+html:has(#zoea-archive:not([hidden])) { scrollbar-gutter: stable; }
+
+#zoea-archive dialog.preview-dialog::backdrop {
+  background: radial-gradient(ellipse at center, #10090566 10%, #100905a6 65%, #100905d9);
+}
 
 /* The field sits behind the content and travels through the same glass as its frame. */
 #zoea-archive [data-popup-surface] {
   position: relative;
   isolation: isolate;
   --edge: clamp(5px, 1.1vmin, 14px);
+}
+/* Solid window frames keep their corners; their phosphor field carries the edge fade. */
+#zoea-archive [data-popup-surface]:not(.asset-plane,.qq-plane),
+#zoea-archive :is(.asset-plane,.qq-plane) > .popup-field {
   mask-image:
     linear-gradient(to right, transparent, #0009 calc(var(--edge) * .32), black var(--edge),
       black calc(100% - var(--edge)), #0009 calc(100% - var(--edge) * .32), transparent),
@@ -22,9 +30,6 @@ html:has(dialog.preview-dialog[open]) { overflow: hidden; }
   position: absolute; inset: 0; z-index: -1;
   display: block; width: 100%; height: 100%;
   pointer-events: none;
-}
-#zoea-archive .qq-glass[data-popup-surface] {
-  background: radial-gradient(ellipse, #26160ae6 25%, #211208bb 68%, transparent);
 }
 #zoea-archive .preview-dialog .asset-glass,
 #zoea-archive .preview-dialog :is(.dossier-profile-content,.dossier-view-body,#dossier-details) {

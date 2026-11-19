@@ -22,7 +22,7 @@
   let duration = 1;
   let entryStart = null, entryFrame = 0;
   const entryHandoff = 182, entryInteractive = 405, entryEnd = 460;
-  home.crtEntryTime = archive.crtEntryTime = now => entryStart === null ? -1 : now-entryStart;
+  home.crtEntryTime = archive.crtEntryTime = now => entryStart === null ? -1 : (now-entryStart)/geometry.durationScale;
   const screenPower = () => {
     if (!effect || effect.playState==='finished') return poweringOff ? 0 : 1;
     const progress = Math.min(1,Math.max(0,(effect.currentTime ?? 0)/duration));
@@ -107,7 +107,7 @@
     ctx.drawImage(field,0,0,width,height);
     flowCtx.clearRect(0,0,width,height);
     if (reduced.matches) { paintPopupFields(); return; }
-    const t = now/1000;
+    const t = now/(1000*geometry.durationScale);
     ctx.fillStyle = '#ffc17b';
     for (const [x,y,seed] of dots) {
       const beat = .5+.5*Math.sin(t*(.8+noise(x,y)*2.6)+seed*97+x*.13);
@@ -214,7 +214,7 @@
     glass.inert = true;
     let handedOff = false, interactive = false;
     function advance(now) {
-      const time = now-entryStart;
+      const time = home.crtEntryTime(now);
       if (!handedOff && (time>=entryHandoff || reduced.matches)) {
         handedOff = true;
         change();
@@ -239,7 +239,7 @@
     const ticket = revision;
     function animate(on) {
       poweringOff = !on;
-      duration = on ? 420 : 330;
+      duration = (on ? 420 : 330)*geometry.durationScale;
       const view = current==='home' ? home : archive;
       const live = view.classList.contains('crt-live-ready');
       const full = {opacity:1,clipPath:'inset(0)'};
@@ -266,9 +266,9 @@
         },()=>{});
         if (!close) {
           background.animate([{opacity:0},{opacity:.28,offset:.26},{opacity:1}],
-            {duration:430,easing:'ease-out'});
+            {duration:430*geometry.durationScale,easing:'ease-out'});
           streamLayer.animate([{opacity:0},{opacity:.28,offset:.26},{opacity:1}],
-            {duration:430,easing:'ease-out'});
+            {duration:430*geometry.durationScale,easing:'ease-out'});
         }
       } else {
         poweringOff = false;

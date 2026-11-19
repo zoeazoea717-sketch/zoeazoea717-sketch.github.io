@@ -19,6 +19,8 @@
   const retryButton = find('.retry-access');
   const worksDirectory = find('.works-directory');
   const privateToggle = find('[data-group="private"]');
+  const privateBody = find('#private-archive');
+  let privateExpanded = false;
   let worksUnlocked = false, checkingPassword = false;
   let worksError;
   const toolDirectory = find('.tool-directory:not(.works-directory)');
@@ -31,7 +33,7 @@
   const assetViewer = find('#asset-viewer');
   const qqDialog = find('#zoea-qq');
   const qqButton = find('[aria-controls="zoea-qq"]');
-  const qqIcon = qqButton.querySelector('img');
+  const contactImages = [...root.querySelectorAll('.archive-portals img, .about-contact img')];
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
@@ -229,22 +231,27 @@
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
     const example = file?.querySelector('.asset-example');
-    const card = worksReady.querySelector('.dossier-card');
-    const transport = card.querySelector('.dossier-card-play');
-    const cardLayout = card.dataset.project && card.getClientRects().length ? {
-      box:measureBox(card), imageBox:measureBox(card.querySelector('.dossier-card-media')), frameBar:measureBox(card.querySelector('.dossier-framebar')),
-      image:card.querySelector('img'), focusY:card.hasAttribute('data-portrait') ? .32 : .5,
-      open:card.querySelector('.dossier-card-open'), rail:measureBox(find('.dossier-projects')),
-      play:transport.hidden ? null : {button:transport,box:measureBox(transport),symbol:measureBox(transport.querySelector('.dossier-play-symbol')),time:measureBox(transport.querySelector('.dossier-duration'))},
-      tabs:[...find('.dossier-projects').children].map(button=>({button,box:measureBox(button)}))
-    } : null;
-    return {layout,cardLayout,
+    const cardLayouts = [...worksReady.querySelectorAll('.dossier-card')]
+      .filter(card=>card.dataset.project && card.getClientRects().length)
+      .map(card=>({
+        box:measureBox(card),
+        imageBox:measureBox(card.querySelector('.dossier-card-media')),
+        image:card.querySelector('img'),
+        open:card.querySelector('.dossier-card-open'),
+        corners:measureBox(card.querySelector('.dossier-corners'))
+      }));
+    const shelf = find('#dossier-student-projects');
+    const bay = find('.dossier-bay');
+    return {layout,cardLayouts,shelfBox:shelf.getClientRects().length ? measureBox(shelf) : null, bay:bay.getClientRects().length ? measureBox(bay) : null,
+      engravings:[...worksReady.querySelectorAll('.dossier-metal')].filter(mark=>mark.getClientRects().length)
+        .map(mark=>({box:measureBox(mark), horizontal:mark.classList.contains('cassette-grip')})),
       dossierBars:[...worksReady.querySelectorAll('.dossier-resume-launch,.dossier-lock,.dossier-group-toggle')]
         .filter(button=>button.getClientRects().length).map(button=>({
           button,bar:measureBox(button),box:measureBox(button.closest('.dossier-group') || button)
         })),
       example:example ? measureBox(example) : null,
-      soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),contactIcon:measureIcon(qqIcon),
+      soundIcon:measureIcon(soundButton.querySelector('.crt-mute-icon')),
+      contactIcons:contactImages.filter(img=>img.getClientRects().length).map(img=>({img,box:measureIcon(img)})),
       files:fileIcons.filter(icon=>icon.getClientRects().length)
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
@@ -268,34 +275,13 @@
     };
   }
 
-  let cachedCardImage, cardPhoto;
-  function cardSignal(img) {
-    if (!img?.naturalWidth || !img.complete) return null;
-    if (img===cachedCardImage) return cardPhoto;
-    const scale = Math.min(1,1500/img.naturalWidth,1050/img.naturalHeight);
-    const output = document.createElement('canvas');
-    output.width = Math.max(1,Math.round(img.naturalWidth*scale));
-    output.height = Math.max(1,Math.round(img.naturalHeight*scale));
-    const target = output.getContext('2d',{willReadFrequently:true});
-    target.drawImage(img,0,0,output.width,output.height);
-    const pixels = target.getImageData(0,0,output.width,output.height);
-    const tone = Array.from({length:256},(_,i)=>Math.round(5+181*(i/255)**.76));
-    for (let i=0;i<pixels.data.length;i+=4) {
-      const value = tone[Math.round(.2126*pixels.data[i]+.7152*pixels.data[i+1]+.0722*pixels.data[i+2])];
-      pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;
-    }
-    target.putImageData(pixels,0,0);
-    cachedCardImage=img; cardPhoto=output;
-    return output;
-  }
-
   function drawLabels(width,height) {
     labelsLayer.width = width;
     labelsLayer.height = height;
     // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
     const scaleX = width/display.clientWidth;
     labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,cardLayout,dossierBars,soundIcon,contactIcon,tiles,groups,properties,files,actions,lock,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
+    const {layout,cardLayouts,dossierBars,bay,engravings,soundIcon,contactIcons,tiles,groups,properties,files,actions,lock,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -322,52 +308,60 @@
         if (button.classList.contains('dossier-lock')) outline(bar,highlighted(button) ? .65 : .35);
         else drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
       }
-      if (cardLayout) {
-        const {box,imageBox,frameBar,image,focusY,open,rail,tabs,play} = cardLayout;
-        outline(rail,.34);
-        for (const {button,box:tab} of tabs) {
-          const selected = button.getAttribute('aria-pressed')==='true';
-          if (!selected && !highlighted(button)) continue;
-          labelsCtx.fillStyle = '#fff';
-          labelsCtx.globalAlpha = selected ? .14 : .08;
-          labelsCtx.fillRect(tab.left,tab.top,tab.width,tab.height);
-          labelsCtx.globalAlpha = selected ? .75 : .40;
-          labelsCtx.fillRect(tab.left+6,tab.top+tab.height-1,Math.max(1,tab.width-12),1);
-        }
-        const plate = cardSignal(image);
-        if (plate && imageBox.width && imageBox.height) {
-          const ratio = Math.max(imageBox.width/plate.width,imageBox.height/plate.height);
-          const w = plate.width*ratio, h = plate.height*ratio;
-          labelsCtx.save();
-          labelsCtx.beginPath();
-          labelsCtx.rect(imageBox.left,imageBox.top,imageBox.width,imageBox.height);
-          labelsCtx.clip();
-          labelsCtx.globalAlpha = highlighted(open) ? 1 : .94;
-          labelsCtx.drawImage(plate,imageBox.left+(imageBox.width-w)/2,imageBox.top+(imageBox.height-h)*focusY,w,h);
-          labelsCtx.restore();
-        }
-        outline(box,highlighted(open) ? .76 : .43);
-        outline(imageBox,.34);
-        labelsCtx.globalAlpha = .42;
+      if (bay) {
+        labelsCtx.save();
         labelsCtx.fillStyle = '#fff';
-        labelsCtx.fillRect(frameBar.left,frameBar.top,frameBar.width,1);
-        if (play) {
-          const {box:key,symbol,time} = play;
-          const lit = highlighted(play.button);
+        labelsCtx.globalAlpha = .018;
+        labelsCtx.fillRect(bay.left+2,bay.top+4,bay.width-4,bay.height-6);
+        labelsCtx.setLineDash([4,4]);
+        outline(bay,.55);
+        labelsCtx.restore();
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.globalAlpha = .28;
+        labelsCtx.fillRect(bay.left+3,bay.top+bay.height-2,bay.width-6,1);
+      }
+      for (const {box,imageBox,image,open,corners} of cardLayouts) {
+        const lit = highlighted(open);
+        labelsCtx.globalAlpha = 1;
+        labelsCtx.fillStyle = '#100b08';
+        labelsCtx.fillRect(imageBox.left,imageBox.top,imageBox.width,imageBox.height);
+        if (image?.naturalWidth && image.complete) {
+          const width = imageBox.width-2, height = imageBox.height-2;
+          const scale = Math.max(width/image.naturalWidth,height/image.naturalHeight);
+          const sw = width/scale, sh = height/scale;
           labelsCtx.save();
-          labelsCtx.clearRect(key.left,key.top,key.width,key.height);
-          drawWindow(key,key,false,lit);
-          outline(key,lit ? 1 : .82);
-          outline(symbol,.65);
-          labelsCtx.globalAlpha = lit ? 1 : .93;
-          labelsCtx.beginPath();
-          labelsCtx.moveTo(symbol.left+symbol.width*.33,symbol.top+symbol.height*.22);
-          labelsCtx.lineTo(symbol.left+symbol.width*.79,symbol.top+symbol.height*.5);
-          labelsCtx.lineTo(symbol.left+symbol.width*.33,symbol.top+symbol.height*.78);
-          labelsCtx.fill();
-          labelsCtx.globalAlpha = .47;
-          labelsCtx.fillRect(time.left-.5,time.top,1,time.height);
+          labelsCtx.filter = 'grayscale(1) brightness(.62)';
+          labelsCtx.drawImage(image,(image.naturalWidth-sw)/2,(image.naturalHeight-sh)/2,sw,sh,
+            imageBox.left+1,imageBox.top+1,width,height);
           labelsCtx.restore();
+        }
+        if (lit) {
+          labelsCtx.fillStyle = '#fff';
+          labelsCtx.globalAlpha = .08;
+          labelsCtx.fillRect(box.left,box.top,box.width,box.height);
+        }
+        outline(box,lit ? .86 : .43);
+        outline(imageBox,lit ? .60 : .34);
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.globalAlpha = lit ? 1 : .82;
+        const arm = Math.min(12,Math.max(8,Math.round(box.width*.045)));
+        for (const dx of [1,-1]) {
+          for (const dy of [1,-1]) {
+            const x = dx>0 ? corners.left : corners.left+corners.width;
+            const y = dy>0 ? corners.top : corners.top+corners.height;
+            labelsCtx.fillRect(x,y,dx*arm,dy*2);
+            labelsCtx.fillRect(x,y,dx*2,dy*arm);
+          }
+        }
+      }
+      // The fallback stripes use the same mark boxes, pitch and stroke widths.
+      labelsCtx.fillStyle = '#fff';
+      labelsCtx.globalAlpha = .68;
+      for (const {box,horizontal} of engravings) {
+        if (horizontal) {
+          for (let y=0;y<box.height;y+=3) labelsCtx.fillRect(box.left,box.top+y,box.width,1);
+        } else {
+          for (let x=0;x<box.width;x+=4) labelsCtx.fillRect(box.left+x,box.top,Math.min(2,box.width-x),box.height);
         }
       }
       for (const {tile,...box} of tiles) {
@@ -418,7 +412,7 @@
       }
     }
     for (const {label,lines,fontWeight,fontSize,fontFamily,left,bottom,width:boxWidth} of layout) {
-      const active = label.getAttribute('aria-pressed') === 'true'
+      const active = Boolean(label.closest('[aria-pressed="true"]'))
         || label.getAttribute('aria-current') === 'page';
       labelsCtx.font = fontWeight+' '+fontSize+' '+fontFamily;
       labelsCtx.textBaseline = 'middle';
@@ -427,8 +421,8 @@
       const descriptionHeading = label.matches('h2,h3');
       labelsCtx.globalAlpha = fileText ? .91 : active ? .69 : descriptionHeading ? .74 : .56;
       const highlighted = label === document.activeElement || label.matches(':hover') ||
-        label.closest('.file-tile')?.matches(':hover,:focus-visible');
-      if (label.matches('.dossier-card-kind,.dossier-card-enlarge,.dossier-card-caption,.dossier-lock,.dossier-project,.dossier-empty')) {
+        label.closest('.file-tile,.dossier-card-open')?.matches(':hover,:focus-visible');
+      if (label.matches('.dossier-card-kind,.dossier-card-number,.dossier-card-tag,.dossier-lock,.dossier-byline,.dossier-bay-status,.dossier-empty')) {
         labelsCtx.globalAlpha = active ? .98 : .64;
       }
       if (highlighted) {
@@ -459,11 +453,12 @@
     if (root.crtLive && soundIcon.width) {
       window.drawCrtSoundIcon(labelsCtx,soundButton,soundIcon.x,soundIcon.y,soundIcon.width);
     }
-    if (root.crtLive && contactIcon.width && qqIcon.complete && qqIcon.naturalWidth) {
-      const {x,y,width:w,height:h} = contactIcon;
-      labelsCtx.globalAlpha = qqButton.matches(':hover,:focus-visible') ? .99 : .82;
-      labelsCtx.drawImage(qqIcon,x-w/2,y-h/2,w,h);
-      qqButton.classList.add('crt-icon-ready');
+    if (root.crtLive) for (const {img,box:{x,y,width:w,height:h}} of contactIcons) {
+      if (!w || !img.complete || !img.naturalWidth) continue;
+      const control = img.parentElement;
+      labelsCtx.globalAlpha = control.matches(':hover,:focus-visible') ? .99 : .82;
+      labelsCtx.drawImage(control.matches('.archive-portals a') ? window.crtIconMask(img) : img,x-w/2,y-h/2,w,h);
+      control.classList.add('crt-icon-ready');
     }
   }
 
@@ -479,11 +474,12 @@
     }
   }
 
-  let titleStamp;
+  const titleStamps = new Map();
   function drawCardTitle(line,font,size,scale) {
-    // Rasterize the same phosphor cells as the archive heading, once per title and size.
+    // Rasterize the same phosphor cells as the archive heading, cached per title and size.
     const id = [line.text,font,scale].join('|');
-    if (titleStamp?.id!==id) {
+    let cells = titleStamps.get(id);
+    if (!cells) {
       const mask = document.createElement('canvas');
       const pen = mask.getContext('2d',{willReadFrequently:true});
       mask.width = Math.ceil((labelsCtx.measureText(line.text).width+5)*scale);
@@ -491,12 +487,11 @@
       pen.scale(scale,scale);
       pen.font = font; pen.fillStyle = '#fff'; pen.textBaseline = 'middle';
       pen.fillText(line.text,1,mask.height/(2*scale));
-      const cells = document.createElement('canvas');
+      cells = document.createElement('canvas');
       cells.width = mask.width; cells.height = mask.height;
       drawPhosphorDots(cells.getContext('2d'),pen.getImageData(0,0,mask.width,mask.height).data,mask.width,mask.height,2.05*scale,0,0);
-      titleStamp = {id,cells};
+      titleStamps.set(id,cells);
     }
-    const {cells} = titleStamp;
     labelsCtx.drawImage(cells,line.left-1,line.middle-cells.height/(2*scale),cells.width/scale,cells.height/scale);
   }
 
@@ -825,7 +820,9 @@
     const box = panel.getBoundingClientRect();
     if (root.crtLive) {
       for (const control of controls) control.style.transform = '';
+      titleStamps.clear();
       labelLayout = measureLabels();
+      root.crtLive.setArtworkBounds([0,0,0,0]);
       updateHitAreas(w,h);
       root.crtLive.setPanel([
         (box.left-screen.left)/w,(box.top-screen.top)/h,
@@ -904,8 +901,9 @@
     root.dataset.view = current;
     root.toggleAttribute('data-file-open',Boolean(file));
     aboutContent.hidden = !about;
+    list.hidden = about;
     worksDirectory.hidden = !works || Boolean(file);
-    const privateOpen = !worksDirectory.hidden && privateToggle.getAttribute('aria-expanded')==='true';
+    const privateOpen = !worksDirectory.hidden && privateExpanded;
     worksLock.hidden = !privateOpen || worksUnlocked;
     worksReady.hidden = !privateOpen || !worksUnlocked;
     if (worksLock.hidden) {
@@ -916,15 +914,27 @@
     updateWorksStatus();
     toolDirectory.hidden = about || Boolean(file) || categoryId!=='tools';
     for (const button of disclosures) {
+      if (button===privateToggle) {
+        privateBody.hidden = !privateExpanded;
+        if (worksUnlocked) {
+          button.removeAttribute('aria-haspopup');
+          button.setAttribute('aria-controls','private-archive');
+          button.setAttribute('aria-expanded',String(privateExpanded));
+          button.textContent = (privateExpanded ? '▾ ' : '▸ ')+text('privateArchive','个人档案');
+        } else {
+          button.removeAttribute('aria-expanded');
+          button.setAttribute('aria-haspopup','dialog');
+          button.setAttribute('aria-controls','dossier-entry');
+          button.textContent = text('privateArchiveLocked','[LOCKED] 个人档案');
+        }
+        continue;
+      }
       const expanded = button.getAttribute('aria-expanded')==='true';
-      const groupName = button===privateToggle ? text('privateArchive','个人档案') :
-        button.dataset.group==='mod' ? 'MOD' : text('programs','程序');
+      const groupName = button.dataset.group==='mod' ? 'MOD' : text('programs','程序');
       button.textContent = (expanded ? '▾ ' : '▸ ')+groupName;
       document.getElementById(button.getAttribute('aria-controls')).hidden = !expanded;
     }
     for (const detail of fileDetails.values()) detail.hidden = detail!==file;
-    const example = file?.querySelector('.asset-example');
-    if (example) populateAssetViewer(example);
     canvas.setAttribute('aria-label',label);
     [...list.children].forEach((button,i)=>button.setAttribute('aria-pressed',String(!about && i===selected)));
     root.querySelectorAll('[data-page]').forEach(button=>{
@@ -1004,7 +1014,7 @@
     } else if (!reduced.matches) {
       panelAnimation?.cancel();
       panelAnimation = panel.animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0)'}],
-        {duration:570,easing:'linear'});
+        {duration:geometry.panelWriteMs,easing:'cubic-bezier(.22,1,.36,1)'});
     }
   }
 
@@ -1090,7 +1100,7 @@
         {clipPath:getComputedStyle(surface).clipPath,filter:'brightness(1)',opacity:1},
         {clipPath:'inset(49.3% 0)',filter:'brightness(2.3)',opacity:1,offset:.68},
         {clipPath:'inset(49.9% 46%)',filter:'brightness(2.5)',opacity:0}
-      ],{duration:155,easing:'ease-in',fill:'forwards'});
+      ],{duration:155*geometry.durationScale,easing:'ease-in',fill:'forwards'});
       closing.finished.then(()=>dialog.close(),()=>{});
     }
     function open() {
@@ -1120,8 +1130,9 @@
     entryWindow.addEventListener('close',entryTilt.resetTilt);
   }
   const dossierImage = find('#dossier-lightbox');
+  const artworkBend = .52;
   window.bindDossierCurve(dossierReader);
-  window.bindDossierCurve(dossierImage,.52);
+  window.bindDossierCurve(dossierImage,artworkBend);
   const inspector = find('#dossier-zoom');
   window.bindDossierCurve(inspector,.36);
   const inspectorTilt = bindGlassTilt(inspector,inspector.querySelector('.preview-glass'),.24);
@@ -1130,25 +1141,66 @@
     bindPreview(dossierReader,dossierReader.querySelector('.preview-glass'),[],.48),
     bindPreview(dossierImage,dossierImage.querySelector('.preview-glass'),[],.43)
   );
-  function populateAssetViewer(example) {
-    const {viewerKey,viewerTitle} = example.dataset;
-    assetViewer.querySelector('h2').textContent = window.zoeaLocale.text(viewerKey,viewerTitle);
-    const figures = [...example.querySelectorAll('figure')].map(source=>{
-      const figure = document.createElement('figure');
-      const caption = document.createElement('figcaption');
-      caption.textContent = source.querySelector('figcaption').textContent;
-      figure.append(source.querySelector('img').cloneNode(),caption);
-      return figure;
-    });
-    assetViewer.querySelector('.preview-pair').replaceChildren(...figures);
+  const assetPanel = assetViewer.querySelector('.asset-viewport');
+  const assetPhoto = new Image();
+  const assetTabs = assetViewer.querySelector('.asset-tabs');
+  const originalButton = assetViewer.querySelector('.asset-original');
+  assetPanel.append(assetPhoto);
+  let assetFigures = [], activeAsset = 0;
+
+  function selectAsset(index) {
+    activeAsset = index;
+    const source = assetFigures[index].querySelector('img');
+    assetPhoto.alt = source.alt;
+    assetPhoto.src = source.currentSrc || source.src;
+    assetPanel.setAttribute('aria-labelledby',assetTabs.children[index].id);
+    for (const [i,tab] of Array.from(assetTabs.children).entries()) {
+      tab.setAttribute('aria-selected',String(i===index));
+      tab.tabIndex = i===index ? 0 : -1;
+    }
   }
-  const assetPlane = assetViewer.querySelector('.asset-plane');
+
+  function updateAssetLabels() {
+    const {viewerKey,viewerTitle} = assetFigures[0].closest('.asset-example').dataset;
+    assetViewer.querySelector('h2').textContent = window.zoeaLocale.text(viewerKey,viewerTitle);
+    assetFigures.forEach((figure,i)=>{
+      const number = String(i+1).padStart(2,'0');
+      assetTabs.children[i].textContent = '['+number+'] '+figure.querySelector('figcaption').textContent;
+    });
+    selectAsset(activeAsset);
+  }
+
+  originalButton.addEventListener('click',()=>{
+    const original = assetViewer.toggleAttribute('data-original');
+    originalButton.setAttribute('aria-pressed',String(original));
+  });
+  assetViewer.addEventListener('keydown',event=>{
+    if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const count = assetFigures.length;
+    let next;
+    switch (event.key) {
+      case 'ArrowLeft': next = (activeAsset+count-1)%count; break;
+      case 'ArrowRight': next = (activeAsset+1)%count; break;
+      case 'Home': next = 0; break;
+      case 'End': next = count-1; break;
+      default: return;
+    }
+    event.preventDefault();
+    selectAsset(next);
+    assetTabs.children[next].focus({preventScroll:true});
+  });
+  document.addEventListener('zoea-language-change',()=>{
+    if (assetViewer.open) updateAssetLabels();
+  });
+  const assetScreen = assetViewer.querySelector('.asset-screen');
   const assetCurve = find('#preview-screen-curve');
   function setAssetCurve() {
-    const width = assetPlane.offsetWidth, height = assetPlane.offsetHeight;
+    const width = assetScreen.offsetWidth, height = assetScreen.offsetHeight;
     if (!width || !height) return;
     const longest = Math.max(width,height);
     const map = assetCurve.querySelector('feImage');
+    assetCurve.setAttribute('width',width);
+    assetCurve.setAttribute('height',height);
     map.setAttribute('width',width);
     map.setAttribute('height',height);
     // R/G encode the shared glassX/glassY offsets. Convert each axis to its own pixel extent.
@@ -1158,23 +1210,43 @@
       fn.setAttribute('slope',slope);
       fn.setAttribute('intercept',(1-slope)/2);
     }
-    assetCurve.querySelector('feDisplacementMap').setAttribute('scale',longest*.036*geometry.bend);
+    assetCurve.querySelector('feDisplacementMap').setAttribute('scale',longest*.036*geometry.bend*artworkBend);
   }
-  new ResizeObserver(setAssetCurve).observe(assetPlane);
+  new ResizeObserver(setAssetCurve).observe(assetScreen);
   geometry.compactTouch.addEventListener('change',setAssetCurve);
-  bindPreview(assetViewer,assetViewer.querySelector('.asset-glass'),root.querySelectorAll('.preview-thumb'),.82,setAssetCurve);
+  const openAssetViewer = bindPreview(assetViewer,assetViewer.querySelector('.asset-glass'),[],.82,setAssetCurve);
+  for (const opener of root.querySelectorAll('.preview-thumb')) {
+    opener.addEventListener('click',()=>{
+      assetFigures = [...opener.closest('.asset-example').querySelectorAll('figure')];
+      activeAsset = assetFigures.indexOf(opener.closest('figure'));
+      assetTabs.replaceChildren(...assetFigures.map((figure,i)=>{
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.id = 'asset-tab-'+(i+1);
+        tab.setAttribute('role','tab');
+        tab.setAttribute('aria-controls',assetPanel.id);
+        tab.addEventListener('click',()=>selectAsset(i));
+        return tab;
+      }));
+      assetViewer.removeAttribute('data-original');
+      originalButton.setAttribute('aria-pressed','false');
+      updateAssetLabels();
+      openAssetViewer();
+    });
+  }
 
   root.addEventListener('crt-view',event=>{
     if (assetViewer.open && event.detail!=='projects/tools/'+openFile?.dataset.fileId) assetViewer.close();
     if (event.detail!=='about' && qqDialog.open) {
       qqDialog.close();
     }
+    if (event.detail==='projects/works/private') privateExpanded = true;
+    else if (!worksUnlocked) privateExpanded = false;
     if (event.detail==='home') { window.zoeaEntry?.hide(); return; }
     const [,category,fileId] = event.detail.split('/');
     const previous = current, previousCategory = selected, previousFile = openFile;
     current = event.detail==='about' ? 'about' : 'project';
     if (category) selected = [...list.children].findIndex(button=>button.dataset.category===category);
-    if (event.detail==='projects/works/private') privateToggle.setAttribute('aria-expanded','true');
     openFile = fileDetails.get(fileId) ?? null;
     if (openFile && category==='tools') {
       const tile = fileTiles.find(link=>link.hash==='#'+event.detail);
@@ -1189,21 +1261,22 @@
   });
   for (const button of disclosures) {
     button.addEventListener('click',()=>{
-      button.setAttribute('aria-expanded',String(button.getAttribute('aria-expanded')!=='true'));
+      if (button===privateToggle) privateExpanded = !privateExpanded;
+      else button.setAttribute('aria-expanded',String(button.getAttribute('aria-expanded')!=='true'));
       updateContent();
       if (button===privateToggle && !worksLock.hidden) window.zoeaEntry?.show();
     });
   }
   document.addEventListener('zoea-language-change',updateContent);
   root.addEventListener('dossier-lock',()=>{
-    cachedCardImage = cardPhoto = titleStamp = null;
+    titleStamps.clear();
     worksUnlocked = false;
     updateContent();
     if (!worksLock.hidden) window.zoeaEntry?.show();
     worksPassword.focus();
   });
   root.addEventListener('dossier-entry-dismiss',()=>{
-    privateToggle.setAttribute('aria-expanded','false');
+    privateExpanded = false;
     updateContent();
     privateToggle.focus({preventScroll:true});
   });
@@ -1222,8 +1295,8 @@
       revealCard = false;
       if (worksReady.hidden || root.hidden || !worksReady.getClientRects().length) return;
       render();
-      if (reveal && root.crtLive && labelLayout?.cardLayout) {
-        const {left,top,width,height} = labelLayout.cardLayout.box;
+      if (reveal && root.crtLive && labelLayout?.shelfBox) {
+        const {left,top,width,height} = labelLayout.shelfBox;
         const w = display.clientWidth, h = display.clientHeight;
         root.crtLive.refreshPanel([left/w,top/h,(left+width)/w,(top+height)/h]);
       }
@@ -1249,7 +1322,7 @@
   for (const event of ['focusin','focusout','pointerover','pointerout','crt-sound-change']) {
     root.addEventListener(event,updateLabelHighlight);
   }
-  qqIcon.addEventListener('load',updateLabelHighlight);
+  for (const img of contactImages) img.addEventListener('load',updateLabelHighlight);
   geometry.fullscreen.addEventListener('change',render);
   document.addEventListener('fullscreenchange',render);
   new ResizeObserver(()=>render()).observe(display);

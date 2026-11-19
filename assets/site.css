@@ -3,6 +3,7 @@ html {
   background: radial-gradient(ellipse at 24% 30%,#241209,#100905 74%) fixed;
   --terminal-font: 'Lucida Console','Courier New','Microsoft YaHei UI',monospace;
   --crt-text-scale: 1;
+  --crt-duration-scale: 2;
 }
 html:fullscreen { --crt-text-scale: 2; }
 @media (display-mode: fullscreen) { html { --crt-text-scale: 2; } }

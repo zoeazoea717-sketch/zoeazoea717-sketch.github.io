@@ -15,6 +15,16 @@
   #zoea-archive button:hover { color:#fff0c3; text-shadow:0 0 10px #f6a448; }
   #zoea-archive .wordmark { font-size:calc(18px * var(--crt-text-scale)); font-weight:700; letter-spacing:.13em; text-shadow:0 0 9px #f48b3575; }
   #zoea-archive nav { display:flex; gap:clamp(9px,2.5vw,28px); }
+  #zoea-archive .archive-portals {
+    margin-inline:auto clamp(12px,2vw,28px); gap:2px;
+  }
+  #zoea-archive .archive-portals a {
+    display:grid; place-items:center; width:clamp(32px,3vw,42px); min-height:44px;
+  }
+  #zoea-archive .archive-portals img { filter:invert(.80) sepia(.60) saturate(1.45) drop-shadow(0 0 4px #ff9d4b85); }
+  #zoea-archive .archive-portals a:is(:hover,:focus-visible) img { filter:invert(.92) sepia(.56) saturate(1.45) drop-shadow(0 0 6px #ff9d4b); }
+  #zoea-archive .archive-portals .crt-icon-ready img { opacity:0; }
+  #zoea-archive .list[hidden] { display:none; }
   #zoea-archive :is(header nav,.index .list) { font-size:var(--archive-menu-size,inherit); }
   #zoea-archive :is(.about-content,.tool-directory,.file-grid,.file-properties)[hidden] { display:none; }
   #zoea-archive nav button { padding:0 7px; color:var(--dim); }
@@ -252,19 +262,19 @@
     #zoea-archive .preview-pair { grid-template-columns:1fr; }
   }
   #asset-viewer {
-    width:min(92vw,1700px); max-width:calc(100% - 16px); max-height:none;
+    width:min(92vw,158dvh,1800px); max-width:calc(100% - 16px); max-height:none;
     --preview-distance:max(900px,105vw); --rest-x:1.4deg; --rest-y:-3deg;
   }
+  #zoea-archive #asset-viewer::backdrop {
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+  }
   #asset-viewer .asset-glass {
-    max-height:88dvh; overflow:auto; overscroll-behavior:contain;
+    max-height:94dvh; overflow:auto; overscroll-behavior:contain;
     scrollbar-color:#997046 #1b100a;
   }
-  #asset-viewer .asset-plane {
-    padding:clamp(10px,1.6vw,26px) clamp(12px,2.2vw,36px);
-    background:
-      linear-gradient(90deg,transparent,#e7a05b9c 18%,#f9c289 52%,#e7a05b9c 82%,transparent) center 2.5% / 94% 1px no-repeat,
-      linear-gradient(90deg,transparent,#c7895288 22%,#edb078a6 50%,#c7895288 78%,transparent) center 97.5% / 94% 1px no-repeat,
-      radial-gradient(ellipse at center,#1b1009fa 30%,#20130dea 68%,#1a1009b0 89%,transparent);
+  #asset-viewer .asset-screen {
+    /* Keep the outer rim inside the displacement map, even at the widest point of the bow. */
+    padding:min(1%, 1dvh) 1%;
     filter:url(#preview-screen-curve);
   }
   .preview-filter { position:absolute; pointer-events:none; }
@@ -272,22 +282,51 @@
     #asset-viewer { width:95vw; --rest-x:.35deg; --rest-y:-.65deg; }
   }
   #asset-viewer .asset-viewer-bar {
-    position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between;
-    gap:.8em; padding:0 4px; margin-bottom:.4em;
-    background:linear-gradient(90deg,transparent,#1c110be8 8%,#1c110be8 92%,transparent);
+    gap:clamp(4px,.8vw,12px);
   }
-  #asset-viewer h2 { margin:0; font-size:clamp(15px,1.4vw,22px); }
-  #asset-viewer :is(h2,figcaption) { color:#ffcf96; text-shadow:0 0 4px #e9a35d99; }
-  #asset-viewer .preview-pair { align-items:start; }
-  #asset-viewer img { display:block; width:100%; height:auto; aspect-ratio:3/2; object-fit:contain; background:#101010; }
-  #zoea-archive .interface-sample { filter:grayscale(1); }
-  #zoea-archive .preview-thumb:has(.interface-sample),
-  #asset-viewer img.interface-sample { aspect-ratio:auto; }
-  #zoea-archive .preview-thumb img.interface-sample { position:static; height:auto; }
-  #zoea-archive #asset-viewer figcaption { padding-top:.25em; font-size:clamp(14px,1.1vw,18px); }
-  @media (max-width:640px) {
-    #zoea-archive #asset-viewer .preview-pair { grid-template-columns:1fr; }
+  #asset-viewer h2 {
+    flex:1; min-width:0; margin:0; color:#ffcf96;
+    font-size:clamp(15px,1.4vw,22px); overflow-wrap:anywhere;
   }
+  #asset-viewer .asset-viewport {
+    position:relative; height:min(66dvh,57vw); min-width:0; overflow:hidden;
+    margin:clamp(6px,1vmin,12px);
+    border:1px solid #b88050; background:#100d0a;
+  }
+  #asset-viewer .asset-viewport img {
+    display:block; width:100%; height:100%; object-fit:contain;
+    filter:sepia(.32) hue-rotate(-10deg) contrast(1.06);
+  }
+  #asset-viewer .asset-viewport::after {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg,#29170510 0 1px,transparent 1px 4px);
+  }
+  #asset-viewer[data-original] .asset-viewport img { filter:none; }
+  #asset-viewer[data-original] .asset-viewport::after { content:none; }
+  #asset-viewer .asset-tabs.dossier-modal-footer {
+    flex-wrap:wrap; justify-content:flex-start; gap:2px clamp(6px,1vw,16px);
+    border-top:1px solid #c689529c;
+    background:linear-gradient(90deg,#53301556,transparent 68%);
+  }
+  #asset-viewer :is(.asset-tabs button,.asset-original) {
+    padding:0 .4em; color:var(--dim); cursor:pointer;
+    font-size:clamp(14px,1.15vw,20px);
+  }
+  #asset-viewer .asset-tabs button { max-width:100%; text-align:left; }
+  #asset-viewer button { -webkit-tap-highlight-color:#ffc48228; }
+  #asset-viewer button.asset-original {
+    flex:none; min-height:36px; padding:2px 10px; border:1px solid #bd814b88;
+  }
+  #asset-viewer .asset-original[aria-pressed="true"] { background-color:#aa6c3238; }
+  #asset-viewer .asset-tabs [aria-selected="true"] { background-color:#bd78342b; }
+  #asset-viewer :is([aria-selected="true"],.asset-original[aria-pressed="true"]) {
+    color:var(--pale); box-shadow:inset 0 -1px #ffc888;
+  }
+  @media (orientation:landscape) and (max-height:500px) {
+    #asset-viewer .asset-viewport { height:min(66dvh, calc(92dvh - 124px)); }
+  }
+  #zoea-archive .preview-thumb:has(.interface-sample) { aspect-ratio:auto; }
+  #zoea-archive .preview-thumb img.interface-sample { position:static; height:auto; filter:grayscale(1); }
   #zoea-archive .file-source { display:inline-flex; align-items:center; min-height:44px; color:var(--pale); }
   #zoea-archive .file-actions {
     display:flex; flex-wrap:wrap; align-items:center; gap:8px;
@@ -330,17 +369,14 @@
     overflow:visible;
   }
   #zoea-archive .qq-dialog {
-    --code-size:min(340px, 74vw, calc(100dvh - 104px));
+    --code-size:min(340px, calc(100vw - 52px), calc(100dvh - 104px));
     max-width:calc(100vw - 20px); max-height:calc(100dvh - 18px);
-  }
-  #zoea-archive .preview-dialog::backdrop {
-    background:radial-gradient(ellipse at center,#10090538 10%,#1009058f 65%,#100905be);
   }
   #zoea-archive .preview-glass {
     position:relative; isolation:isolate;
     transform:perspective(var(--preview-distance,760px)) rotateX(calc(var(--rest-x,0deg) + var(--dialog-tilt-x,0deg))) rotateY(calc(var(--rest-y,0deg) + var(--dialog-tilt-y,0deg)));
   }
-  #zoea-archive .qq-glass { padding:6px 14px 14px; }
+  #zoea-qq .qq-plane .qq-code { align-self:center; margin:clamp(8px,2vmin,14px); }
   #zoea-archive .preview-glass::before {
     content:""; position:absolute; inset:1px; pointer-events:none;
     background:
@@ -352,7 +388,6 @@
       linear-gradient(0deg,transparent,#000 16%,#000 84%,transparent);
     mask-composite:intersect;
   }
-  #zoea-archive .qq-dialog form { display:flex; justify-content:flex-end; margin-bottom:4px; }
   #zoea-archive .preview-close {
     display:grid; place-items:center; width:44px; min-height:44px; cursor:pointer;
   }
@@ -365,7 +400,8 @@
     filter:drop-shadow(0 0 3px #ef8b4c);
   }
   #zoea-archive .qq-code {
-    position:relative; width:var(--code-size); aspect-ratio:1;
+    /* This QR image spans 37 modules including the quiet zone. */
+    position:relative; width:var(--code-size); width:round(down,var(--code-size),37px); aspect-ratio:1;
     background:#211006;
     mask-image:
       linear-gradient(90deg,transparent,#000 2%,#000 98%,transparent),
@@ -380,15 +416,15 @@
   #zoea-archive .qq-code > .crt-live { position:absolute; inset:0; pointer-events:none; }
   @media (prefers-reduced-motion:no-preference) {
     #zoea-archive .preview-dialog[open] .preview-glass {
-      animation:crt-expose 260ms ease-out;
+      animation:crt-expose calc(260ms * var(--crt-duration-scale)) cubic-bezier(.22,1,.36,1);
       transition:transform 135ms ease-out;
     }
-    #zoea-archive .preview-dialog[open] :is(.qq-code,.preview-pair) { animation:qq-write 160ms 65ms linear both; }
-    #zoea-archive .preview-dialog[open] .preview-glass::before { animation:qq-line 105ms ease-out both; }
+    #zoea-archive .preview-dialog[open] :is(.qq-code,.asset-viewport) { animation:qq-write calc(160ms * var(--crt-duration-scale)) calc(65ms * var(--crt-duration-scale)) linear both; }
+    #zoea-archive .preview-dialog[open] .preview-glass::before { animation:qq-line calc(105ms * var(--crt-duration-scale)) ease-out both; }
     #zoea-archive .preview-dialog[open] .preview-glass::after {
       content:""; position:absolute; inset:0; pointer-events:none;
       background:linear-gradient(90deg,transparent 40%,#ffba7266 50%,transparent 60%) -30% 0 / 24% 100% no-repeat;
-      animation:qq-sweep 190ms 60ms linear both;
+      animation:qq-sweep calc(190ms * var(--crt-duration-scale)) calc(60ms * var(--crt-duration-scale)) linear both;
     }
   }
   @keyframes crt-expose {
@@ -423,11 +459,18 @@
   }
   @media(max-width:580px) {
     #zoea-archive header { min-height:54px; }
+    #zoea-archive .archive-portals { margin-inline:auto 6px; gap:0; }
     #zoea-archive main { min-height:max(390px,calc(100svh - 54px)); padding-bottom:12px; }
     #zoea-archive .intro { gap:7px; }
     #zoea-archive .index { column-gap:8px; font-size:calc(13px * var(--crt-text-scale)); }
     #zoea-archive .list { gap:9px; }
     #zoea-archive nav button { padding-inline:5px; }
+  }
+  @media(max-width:380px) {
+    #zoea-archive header { flex-wrap:wrap; padding-inline: max(52px,calc(var(--mute-inset) + 41px)) max(10px,env(safe-area-inset-right)); }
+    #zoea-archive header .crt-mute { top:0; }
+    #zoea-archive .archive-portals a { width:29px; }
+    #zoea-archive header nav:last-child { margin-left:auto; }
   }
   @container tool-directory (min-width:240px) {
     #zoea-archive .file-grid { --file-columns:2; }

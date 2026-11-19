@@ -25,7 +25,7 @@
   let terminalX = 0, terminalY = 0;
   const portalIcons = [...root.querySelectorAll('.portals [data-platform],.crt-mute,.crt-language')].map(control=>({
     control, image:control.querySelector('img'), mark:control.firstElementChild,
-    mask:null, dx:0, dy:0
+    dx:0, dy:0
   }));
   let portalLayout;
   const terrainSprites = new Map();
@@ -246,18 +246,10 @@
     }
     for (const {portal,x,y,sx,sy,width,height} of portalLayout.icons) {
       const {control,image,mark} = portal;
-      if (image && !portal.mask) {
-        const mask = makeLayer(72,72);
-        mask.drawImage(image,0,0,72,72);
-        mask.globalCompositeOperation = 'source-in';
-        mask.fillStyle = '#fff';
-        mask.fillRect(0,0,72,72);
-        portal.mask = mask.canvas;
-      }
       if (image) {
         const bright = control.matches(':hover, :focus-visible');
         target.globalAlpha = bright ? .98 : .72;
-        target.drawImage(portal.mask,sx-width/2,sy-height/2,width,height);
+        target.drawImage(window.crtIconMask(image),sx-width/2,sy-height/2,width,height);
         target.globalAlpha = 1;
       } else if (control.matches('.crt-mute')) {
         window.drawCrtSoundIcon(target,control,sx,sy,width);
@@ -633,7 +625,7 @@
     let started;
     function expose(now) {
       started ??= now;
-      const time = clamp((now-started)/920);
+      const time = clamp((now-started)/(920*geometry.durationScale));
       if (time === 1) {
         surface.data.set(final);
       } else {

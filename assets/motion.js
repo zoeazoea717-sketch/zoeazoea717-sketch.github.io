@@ -4,14 +4,34 @@ window.crtGeometry = (() => {
     '(hover: none) and (pointer: coarse) and (max-height: 600px)'
   ].join(', '));
   const blend = (flat,curved,bend) => bend===1 ? curved : flat+(curved-flat)*bend;
+  const durationScale = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--crt-duration-scale')) || 1;
   return {
     compactTouch,
+    durationScale,
+    panelWriteMs: 270 * durationScale,
     fullscreen:matchMedia('(display-mode: fullscreen)'),
     get bend() { return compactTouch.matches ? .28 : 1; },
     get tilt() { return compactTouch.matches ? .35 : 1; },
     blend,
     glassX: (x,y,bend) => blend(.5*x,.48*x*(1+.044*y*y+.022*x*x),bend),
     glassY: (x,y,bend) => blend(.5*y,.48*y*(1+.061*x*x+.018*y*y),bend)
+  };
+})();
+
+// CRT shaders read brightness. Use each platform logo's alpha as white phosphor ink.
+window.crtIconMask = (() => {
+  const masks = new WeakMap();
+  return image => {
+    if (masks.has(image)) return masks.get(image);
+    const mask = document.createElement('canvas');
+    mask.width = mask.height = 72;
+    const ctx = mask.getContext('2d');
+    ctx.drawImage(image,0,0,72,72);
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,72,72);
+    masks.set(image,mask);
+    return mask;
   };
 })();
 
@@ -27,7 +47,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     'precision highp float;',
     'out vec4 color;',
     'uniform vec2 size, viewport, pointer;',
-    'uniform vec4 panel, writeBounds, entryCaret;',
+    'uniform vec4 panel, writeBounds, entryCaret, artwork;',
     'uniform vec3 writeEdge;',
     'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime, bend;',
     'uniform bool home, closeup;',
@@ -123,6 +143,14 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     '  vec2 q=glassUV;',
     '  float depth=smoothstep(.56,1.,q.y);',
     '  if(home) q.x-=pointer.x*.003*depth;',
+    // The artwork uses the same projected texture coordinates and reveal as its amber frame.
+    '  if(artwork.z>artwork.x && all(greaterThanEqual(q,artwork.xy)) && all(lessThan(q,artwork.zw))){',
+    '    bool writing=entering || (panelRefresh<1. && all(greaterThanEqual(q,writeBounds.xy)) && all(lessThanEqual(q,writeBounds.zw)));',
+    '    float visibility=power*(writing ? 1.-smoothstep(writeEdge.y,writeEdge.z,q.x) : 1.);',
+    '    float scanline=.985+.015*cos(6.2831853*q.y*viewport.y/3.);',
+    '    color=vec4(texture(signalTex,q).rgb*scanline,1.)*visibility;',
+    '    return;',
+    '  }',
     '  float sharp=texture(signalTex,q).r;',
     '  float diffuse=textureLod(signalTex,q,home ? 2.8 : 1.75).r;',
     '  float halo=textureLod(signalTex,q,home ? 4.65 : 3.3).r;',
@@ -219,7 +247,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
   gl.useProgram(program);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   const uniforms = Object.fromEntries(
-    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret','bend']
+    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret','bend','artwork']
       .map(name => [name, gl.getUniformLocation(program, name)])
   );
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -245,6 +273,17 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
   let entryCaret = [-1,-1,0,0];
   const cap = (n, min, max) => Math.max(min, Math.min(max, n));
 
+  // Use the same cubic-bezier(.22,1,.36,1) as the CSS reveal.
+  function panelWriteProgress(time) {
+    if (time === 0 || time === 1) return time;
+    let t = time;
+    for (let i = 0; i < 4; i++) {
+      const x = t * (.66 + t * (-.24 + .58 * t));
+      t -= (x - time) / (.66 + t * (-.48 + 1.74 * t));
+    }
+    return 1 - (1 - t) ** 3;
+  }
+
   function draw(now) {
     frame = 0;
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -254,7 +293,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     const entryTime = reduced.matches ? -1 : root.crtEntryTime?.(now) ?? -1;
     const holdHome = home && entryTime>=0;
     if (!holdHome) {
-      if (!reduced.matches) seconds += dt;
+      if (!reduced.matches) seconds += dt / geometry.durationScale;
       x += (targetX-x)*(1-Math.exp(-dt*10));
       y += (targetY-y)*(1-Math.exp(-dt*10));
       presence += (Number(pointerInside)-presence)*(1-Math.exp(-dt*14));
@@ -282,7 +321,8 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
     gl.uniform1f(uniforms.pointerPresence,presence);
     gl.uniform4fv(uniforms.panel,panelBounds);
     const bounds = writeBounds ?? panelBounds;
-    const progress = reduced.matches ? 1 : cap((now-refreshStart)/570,0,1);
+    const elapsed = reduced.matches ? 1 : cap((now-refreshStart)/geometry.panelWriteMs,0,1);
+    const progress = panelWriteProgress(elapsed);
     const enteringArchive = !home && entryTime>=0;
     // Both renderers use this edge in the unprojected page, before glass distortion.
     const front = enteringArchive ? -.045+1.155*cap((entryTime-192)/222,0,1)
@@ -362,6 +402,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
 
   root.crtLive = {
     setPanel(bounds) { panelBounds = bounds; },
+    setArtworkBounds(bounds) { gl.uniform4fv(uniforms.artwork,bounds); },
     setHitAreaUpdater(update) { updateHitAreas = update; },
     setPanelMediaUpdater(update) { updatePanelMedia = update; },
     setEntryCaret(bounds) { entryCaret = bounds; },

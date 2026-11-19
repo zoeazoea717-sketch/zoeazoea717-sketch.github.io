@@ -177,7 +177,7 @@
     const still = reducedMotion.matches;
     if (!still && lastPaint) elapsed += Math.min((now - lastPaint) / 1000, .18);
     lastPaint = now;
-    const time = still ? 0 : elapsed * 1.05;
+    const time = still ? 0 : elapsed * 1.05 / window.crtGeometry.durationScale;
     const travel = .49 * Math.sin(time * .43) + .17 * Math.sin(time * .91);
     const {width, height, rows, occlusion} = layout;
     const horizon = height * .437;

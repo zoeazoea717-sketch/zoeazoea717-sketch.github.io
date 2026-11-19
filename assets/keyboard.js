@@ -40,7 +40,11 @@
     else if (vertical) window.scrollBy(0,sign*window.innerHeight*.45);
   }
 
-  document.addEventListener('pointerdown',()=>setInput('pointer'),true);
+  // Hiding the keyboard guide can move the footer. Wait until the pointer's
+  // click target is fixed so the first tap after Escape still activates it.
+  document.addEventListener('click',event=>{
+    if (event.detail > 0) setInput('pointer');
+  },true);
   // Capture the modality before the browser moves focus or activates a control.
   document.addEventListener('keydown',event=>{
     if (!event.isComposing && !event.altKey && !event.metaKey && !event.ctrlKey &&

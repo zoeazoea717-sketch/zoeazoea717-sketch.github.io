@@ -89,7 +89,7 @@
     const control = event.target.closest('button:not(:disabled),a[href]');
     if (!control || control.matches('.crt-mute,.about-contact,.preview-thumb,[data-dossier-control][aria-haspopup="dialog"],.works-lock [type="submit"]')) return;
     if (control.matches('.dossier-zoom-toggle,.dossier-zoom-reset,[data-zoom-step]')) return;
-    if (control.matches('dialog button') && !control.matches('.dossier-film,.dossier-download,.dossier-pagination button,.retry-access')) return;
+    if (control.matches('dialog button') && !control.matches('.dossier-film,.dossier-download,.dossier-pagination button,.retry-access,.asset-tabs button,.asset-original')) return;
     if (event.button!==0 && !(event.button===1 && control.matches('a[href]'))) return;
     if (control.matches('.file-tile,.file-action[href^="#projects/"]')) {
       // Opening another tab leaves this tab's route unchanged.

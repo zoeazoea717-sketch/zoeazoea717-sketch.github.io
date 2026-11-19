@@ -2,11 +2,8 @@
   const root = document.getElementById('zoea-archive');
   const directory = root.querySelector('.works-unlocked');
   const resume = directory.querySelector('.dossier-resume-launch');
-  const projectList = directory.querySelector('.dossier-projects');
-  const card = directory.querySelector('.dossier-card');
-  const cardOpen = card.querySelector('.dossier-card-open');
-  const cardMedia = card.querySelector('.dossier-card-media');
-  const playCard = card.querySelector('.dossier-card-play');
+  const byline = resume.querySelector('.dossier-byline');
+  const projectGrid = directory.querySelector('#dossier-student-projects');
   const profile = document.getElementById('dossier-reader');
   const profileContent = profile.querySelector('.dossier-profile-content');
   const viewer = document.getElementById('dossier-lightbox');
@@ -20,14 +17,12 @@
   const base = new URL('./assets/dossier/', document.baseURI);
   const sessionName = 'zoea.private.dossier.v1';
   const resources = new Map();
-  const cardPositions = new Map();
   const zh = () => !document.documentElement.lang.startsWith('en');
   const copy = (chinese, english) => zh() ? chinese : english;
   const read = value => zh() ? value.zh : value.en;
   let key, dossier, selectedId, profileWindow, imageWindow;
   let viewerPosition = 0, viewerOpener;
-  let cardRevision = 0, viewerRevision = 0, filmRevision = 0;
-  let swipe, suppressClick = false, tapFallback;
+  let gridRevision = 0, viewerRevision = 0, filmRevision = 0;
 
   function el(tag, className, value) {
     const node = document.createElement(tag);
@@ -56,9 +51,8 @@
     key = candidate;
     dossier = decoded;
     selectedId = decoded.projects[0]?.id;
-    cardPositions.clear();
     for (const toggle of directory.querySelectorAll('.dossier-group-toggle')) {
-      setGroup(toggle,toggle.getAttribute('aria-controls')==='dossier-student-projects');
+      setGroup(toggle,true);
     }
     buildIndex();
   }
@@ -132,31 +126,74 @@
   }
 
   function buildIndex() {
-    projectList.replaceChildren();
-    projectList.hidden = dossier.projects.length<2;
-    for (const work of dossier.projects) {
-      const button = el('button','dossier-project',read(work.title));
-      button.type = 'button';
-      button.dataset.project = work.id;
-      button.dataset.dossierControl = '';
-      button.dataset.worksText = '';
-      button.addEventListener('click',()=>{
-        if (selectedId===work.id) return;
+    const profile = dossier.profile;
+    byline.textContent = read(profile.name)+' · '+(profile.cardRole ? read(profile.cardRole) : copy('三维美术','3D Artist'));
+    const revision = ++gridRevision;
+    projectGrid.replaceChildren();
+    for (const [index,work] of dossier.projects.entries()) {
+      const item = work.cardCover || frames(work)[0];
+      const title = read(work.title);
+      const cardEl = el('article','dossier-card');
+      cardEl.dataset.project = work.id;
+      const corners = el('i','dossier-corners');
+      corners.setAttribute('aria-hidden','true');
+
+      const openBtn = el('button','dossier-card-open');
+      openBtn.type = 'button';
+      openBtn.dataset.dossierControl = '';
+      openBtn.setAttribute('aria-haspopup','dialog');
+      openBtn.setAttribute('aria-controls','dossier-lightbox');
+      openBtn.setAttribute('aria-label',copy('查看作品','View artwork')+' · '+title+' · '+captionText(item));
+      openBtn.setAttribute('aria-busy','true');
+
+      const media = el('span','dossier-card-media');
+      const copyBox = el('span','dossier-card-copy');
+      const num = el('span','dossier-card-number',String(index+1).padStart(2,'0'));
+      num.dataset.worksText = '';
+      const tagText = work.tag ? read(work.tag) : (work.film?.duration || '');
+      const tag = el('span','dossier-card-tag',tagText);
+      tag.dataset.worksText = '';
+      const name = el('strong','dossier-card-name',title);
+      name.dataset.worksText = '';
+      const kind = el('span','dossier-card-kind',read(work.subtitle || work.medium));
+      kind.dataset.worksText = '';
+      const pins = el('i','dossier-metal dossier-pins');
+      pins.setAttribute('aria-hidden','true');
+      copyBox.append(num,tag,name,kind,pins);
+
+      const hit = el('span','dossier-surface-hit dossier-card-hit');
+      hit.setAttribute('aria-hidden','true');
+      openBtn.append(media,copyBox,hit);
+      cardEl.append(corners,openBtn);
+
+      openBtn.addEventListener('click',()=>{
         selectedId = work.id;
-        showCard(true);
+        openPicture(openBtn);
       });
-      projectList.append(button);
+
+      projectGrid.append(cardEl);
+      if (viewer.open && selectedId===work.id) viewerOpener = openBtn;
+      loadImage(item).then(image=>{
+        if (revision!==gridRevision) return;
+        openBtn.setAttribute('aria-busy','false');
+        media.dataset.object = item.object;
+        media.replaceChildren(image);
+        notifyLayout();
+      }).catch(()=>{
+        if (revision!==gridRevision) return;
+        openBtn.setAttribute('aria-busy','false');
+        notifyLayout();
+      });
     }
-    showCard();
+    notifyLayout(true);
   }
 
   function countText(position,total) {
     return String(position+1).padStart(2,'0')+' / '+String(total).padStart(2,'0');
   }
 
-  function captionText(item,includeTitle=false) {
-    const title = includeTitle && item.title ? read(item.title)+' · ' : '';
-    return title+read(item.caption)+(item.time ? '　'+item.time : '');
+  function captionText(item) {
+    return read(item.caption)+(item.time ? '　'+item.time : '');
   }
 
   async function loadImage(item) {
@@ -165,52 +202,6 @@
     image.src = await resourceURL(item);
     await image.decode();
     return image;
-  }
-
-  function showCard(reveal=false) {
-    const work = project();
-    if (!work) return;
-    const items = frames(work);
-    const position = cardPositions.get(work.id) || 0;
-    const item = position===0 && work.cardCover ? work.cardCover : items[position];
-    const title = read(work.title);
-    card.dataset.project = work.id;
-    card.toggleAttribute('data-portrait',item.height>item.width);
-    card.querySelector('.dossier-card-name').textContent = title;
-    card.querySelector('.dossier-card-kind').textContent = read(work.medium);
-    const caption = captionText(item,item===work.cardCover);
-    card.querySelector('.dossier-card-caption').textContent = caption;
-    card.querySelector('.dossier-frame-count').textContent = countText(position,items.length);
-    cardOpen.setAttribute('aria-label',copy('查看原图','View original')+' · '+title+' · '+caption);
-    const clip = filmFor(work,position);
-    playCard.hidden = !clip;
-    playCard.querySelector('.dossier-duration').textContent = clip?.duration || '';
-    if (clip) {
-      playCard.querySelector('.dossier-play-label').textContent = clipLabel(clip);
-      playCard.setAttribute('aria-label',playLabel(clip)+' · '+title);
-    }
-    else playCard.removeAttribute('aria-label');
-    for (const button of projectList.children) button.setAttribute('aria-pressed',String(button.dataset.project===work.id));
-    for (const button of card.querySelectorAll('[data-step]')) button.disabled = items.length<2;
-    const revision = ++cardRevision;
-    cardOpen.setAttribute('aria-busy','true');
-    if (cardMedia.dataset.object!==item.object) {
-      cardMedia.replaceChildren();
-      delete cardMedia.dataset.object;
-    }
-    loadImage(item).then(image=>{
-      if (revision!==cardRevision) return;
-      cardOpen.setAttribute('aria-busy','false');
-      cardMedia.dataset.object = item.object;
-      cardMedia.replaceChildren(image);
-      notifyLayout(reveal);
-    }).catch(()=>{
-      if (revision!==cardRevision) return;
-      cardOpen.setAttribute('aria-busy','false');
-      card.querySelector('.dossier-card-caption').textContent = copy('封面未载入，点击重试','Cover unavailable. Click to retry.');
-      notifyLayout();
-    });
-    notifyLayout();
   }
 
   function showViewerFrame() {
@@ -245,18 +236,13 @@
     });
   }
 
-  function changeFrame(owner,step) {
+  function changeFrame(step) {
     const work = project();
     if (!work) return;
     const total = frames(work).length;
-    if (owner===viewer) {
-      stopFilm();
-      viewerPosition = (viewerPosition+step+total)%total;
-      showViewerFrame();
-    } else {
-      cardPositions.set(work.id,((cardPositions.get(work.id)||0)+step+total)%total);
-      showCard(true);
-    }
+    stopFilm();
+    viewerPosition = (viewerPosition+step+total)%total;
+    showViewerFrame();
   }
 
   function section(title,value) {
@@ -268,7 +254,7 @@
   function renderProfile() {
     const p = dossier.profile;
     const heading = el('div','dossier-identity');
-    heading.append(el('p','dossier-path','C:\\ZOEA\\PROFILE>'),el('h3','dossier-title dossier-phosphor',read(p.name)),el('p','dossier-job',p.handle+'　/　'+read(p.direction)));
+    heading.append(el('p','dossier-path','C:\\ZOEA\\RESUME>'),el('h3','dossier-title dossier-phosphor',read(p.name)),el('p','dossier-job',p.handle+' / '+read(p.direction)));
     const contacts = el('section','dossier-copy');
     const links = el('div','dossier-contacts');
     for (const [scheme,value] of [['tel:',p.phone],['mailto:',p.email]]) {
@@ -276,8 +262,38 @@
       a.href = scheme+value;
       links.append(a);
     }
-    contacts.append(el('h3','',copy('联系方式','Contact')),links);
-    profileContent.replaceChildren(heading,section(copy('教育经历','Education'),read(p.education)+'　'+p.years),section(copy('学生时期','Student work'),read(p.intro)),contacts);
+    for (const portal of root.querySelectorAll('.archive-portals a')) {
+      const link = el('a','',portal.getAttribute('aria-label')+' ↗');
+      link.href = portal.href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      links.append(link);
+    }
+    contacts.append(el('h3','',copy('联系方式与入口','Contact & links')),links);
+    const years = zh() ? '（'+p.years+'）' : ' ('+p.years+')';
+    if (p.software?.length) {
+      const tools = el('p','dossier-software');
+      tools.append(el('strong','',copy('常用软件','Software')),el('span','',p.software.join(' · ')));
+      heading.append(tools);
+    }
+    profileContent.replaceChildren(heading,section(copy('教育背景','Education'),read(p.education)+years),
+      section(copy('个人简介','Profile'),read(p.intro)));
+    for (const [title,rows] of [
+      [copy('核心管线','Core pipeline'),p.pipeline],
+      [copy('代表作品与获奖','Selected work & awards'),p.highlights]
+    ]) {
+      if (!rows?.length) continue;
+      const group = el('section','dossier-copy');
+      const entries = el('ul','resume-entries');
+      for (const row of rows) {
+        const item = el('li');
+        item.append(el('strong','',read(row.label)),document.createTextNode(copy('：',': ')+read(row.text)));
+        entries.append(item);
+      }
+      group.append(el('h3','',title),entries);
+      profileContent.append(group);
+    }
+    profileContent.append(contacts);
     profile.querySelector('.dossier-status').textContent = '';
     profile.dispatchEvent(new Event('dossier-selection'));
   }
@@ -305,9 +321,6 @@
     const action = open ? copy('收起介绍','Hide details') : copy('作品介绍','Project details');
     infoToggle.textContent = action+(open ? '　×' : '　→');
     infoToggle.setAttribute('aria-expanded',String(open));
-    original.setAttribute('aria-expanded',String(open));
-    original.setAttribute('aria-label',open ? copy('点击原图收起介绍','Click image to hide details') : copy('点击原图查看作品介绍','Click image for project details'));
-    original.title = original.getAttribute('aria-label');
   }
 
   function setDetails(open,moveFocus=false) {
@@ -321,7 +334,7 @@
         const body = details.parentElement;
         body.scrollTop = Math.max(0,details.offsetTop - body.clientHeight*.45);
       }
-      if (moveFocus) details.querySelector('button').focus({preventScroll:true});
+      if (moveFocus) details.focus({preventScroll:true});
     } else {
       details.parentElement.scrollTop = 0;
       if (moveFocus) infoToggle.focus({preventScroll:true});
@@ -412,66 +425,26 @@
     renderProfile();
     profileContent.scrollTop = 0;
   });
-  function openPicture(opener=cardOpen) {
+  function openPicture(opener) {
     if (!dossier || viewer.open) return;
     viewerOpener = opener;
-    viewerPosition = cardPositions.get(selectedId) || 0;
+    viewerPosition = 0;
     imageWindow();
     setDetails(false);
     showViewerFrame();
-    if (opener===playCard) playFilm();
   }
-  cardOpen.addEventListener('click',()=>{
-    clearTimeout(tapFallback);
-    if (suppressClick) { suppressClick = false; return; }
-    if (!cardMedia.dataset.object && cardOpen.getAttribute('aria-busy')==='false') { showCard(); return; }
-    openPicture();
-  });
-  playCard.addEventListener('click',()=>openPicture(playCard));
   original.addEventListener('click',()=>{
     if (original.getAttribute('aria-busy')==='true') return;
     if (!original.querySelector('img').hasAttribute('src')) showViewerFrame();
-    else toggleDetails();
   });
   infoToggle.addEventListener('click',toggleDetails);
-  details.querySelector('.dossier-hide-info').addEventListener('click',()=>{
-    setDetails(false,true);
-    root.dispatchEvent(new CustomEvent('dossier-action',{detail:'collapse'}));
-  });
-  for (const owner of [card,viewer]) {
-    for (const button of owner.querySelectorAll('[data-step]')) button.addEventListener('click',()=>changeFrame(owner,Number(button.dataset.step)));
-    owner.addEventListener('keydown',event=>{
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('video,aside')) return;
-      if (event.key!=='ArrowLeft' && event.key!=='ArrowRight') return;
-      event.preventDefault();
-      changeFrame(owner,event.key==='ArrowRight' ? 1 : -1);
-      root.dispatchEvent(new CustomEvent('dossier-action',{detail:'select'}));
-    });
-  }
-  document.addEventListener('pointerdown',()=>clearTimeout(tapFallback),{capture:true,passive:true});
-  cardOpen.addEventListener('pointerdown',event=>{
-    suppressClick = false;
-    if (event.isPrimary && event.button===0) swipe = {id:event.pointerId,x:event.clientX,y:event.clientY};
-  });
-  cardOpen.addEventListener('pointercancel',()=>{swipe=null;});
-  cardOpen.addEventListener('pointerup',event=>{
-    if (swipe?.id!==event.pointerId) return;
-    const dx = event.clientX-swipe.x, dy = event.clientY-swipe.y;
-    swipe = null;
-    if (event.pointerType==='touch' && Math.hypot(dx,dy)<10) {
-      // Let the compatibility click finish on the card before a native dialog covers it.
-      // Some touch browsers omit that click immediately after a horizontal swipe.
-      const tapped = cardMedia.dataset.object;
-      tapFallback = setTimeout(()=>{
-        if (dossier && !viewer.open && cardOpen.getClientRects().length && tapped===cardMedia.dataset.object) openPicture();
-      },450);
-      return;
-    }
-    if (Math.abs(dx)<45 || Math.abs(dx)<Math.abs(dy)*1.5) return;
-    suppressClick = true;
-    changeFrame(card,dx<0 ? 1 : -1);
+  for (const button of viewer.querySelectorAll('[data-step]')) button.addEventListener('click',()=>changeFrame(Number(button.dataset.step)));
+  viewer.addEventListener('keydown',event=>{
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('video,aside')) return;
+    if (event.key!=='ArrowLeft' && event.key!=='ArrowRight') return;
+    event.preventDefault();
+    changeFrame(event.key==='ArrowRight' ? 1 : -1);
     root.dispatchEvent(new CustomEvent('dossier-action',{detail:'select'}));
-    setTimeout(()=>{suppressClick=false;},400);
   });
 
   viewer.addEventListener('cancel',event=>{
@@ -519,26 +492,17 @@
   });
 
   function lock() {
-    clearTimeout(tapFallback);
-    ++cardRevision;
+    ++gridRevision;
     ++viewerRevision;
     if (profile.open) profile.close();
     if (viewer.open) viewer.close();
     stopFilm();
     key = dossier = selectedId = null;
-    cardPositions.clear();
-    projectList.replaceChildren();
-    cardMedia.replaceChildren();
-    delete cardMedia.dataset.object;
-    playCard.hidden = true;
-    playCard.removeAttribute('aria-label');
-    playCard.querySelector('.dossier-duration').textContent = '';
+    byline.textContent = '';
+    projectGrid.replaceChildren();
     film.textContent = '';
-    for (const element of root.querySelectorAll('.dossier-card-name,.dossier-card-kind,.dossier-card-caption,.dossier-frame-count,.dossier-image-caption,#dossier-lightbox-title,.dossier-details-copy,.dossier-profile-content')) element.replaceChildren();
-    cardOpen.removeAttribute('aria-label');
-    card.removeAttribute('data-project');
-    card.removeAttribute('data-portrait');
-    cardOpen.removeAttribute('aria-busy');
+    for (const element of root.querySelectorAll('.dossier-frame-count,.dossier-image-caption,#dossier-lightbox-title,.dossier-details-copy,.dossier-profile-content')) element.replaceChildren();
+    viewerOpener = null;
     for (const promise of resources.values()) promise.then(url=>URL.revokeObjectURL(url)).catch(()=>{});
     resources.clear();
     try { sessionStorage.removeItem(sessionName); } catch {}

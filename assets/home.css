@@ -101,7 +101,7 @@
     margin: 0 0 .20em .10em;
     background: #ffcf8a;
     box-shadow: 0 0 5px #ffbf72,0 0 12px #f89447a8;
-    animation: zoea-caret 1.35s steps(1,end) infinite;
+    animation: zoea-caret calc(1.35s * var(--crt-duration-scale)) steps(1,end) infinite;
   }
   #zoea-monitor.crt-terminal-ready .terminal :is(.terminal-label,.terminal-caret) { opacity:0; animation:none; }
   #zoea-monitor.crt-terminal-ready .terminal { background:none; text-shadow:none; }

@@ -25,9 +25,6 @@
   text-align: left;
   color-scheme: dark;
 }
-#zoea-archive #dossier-entry::backdrop {
-  background: radial-gradient(ellipse at center, #10090532 8%, #10090572 65%, #100905a8);
-}
 #zoea-archive #dossier-entry .entry-sheet {
   position: relative;
   isolation: isolate;
@@ -38,7 +35,12 @@
   background: #1c0d05;
   box-shadow: 0 0 7px #d47b3745, 0 8px 30px #10080455;
 }
-#dossier-entry .entry-sheet::after, #dossier-lightbox .dossier-plane::after, #dossier-zoom .dossier-inspector-frame::after {
+#zoea-archive :is(.asset-plane,.qq-plane).dossier-plane {
+  border: 1px solid #ba81539e;
+  box-shadow: inset 0 0 12px #ae682422, 0 0 8px #b577383b;
+}
+#dossier-entry .entry-sheet::after, #dossier-lightbox .dossier-plane::after,
+#dossier-zoom .dossier-inspector-frame::after, #asset-viewer .asset-plane::after, #zoea-qq .qq-plane::after {
   content: "";
   position: absolute;
   inset: 5px;
@@ -157,7 +159,7 @@ html:lang(en) #zoea-archive #dossier-entry h2 {
 #dossier-entry .entry-form-slot { grid-area: form; z-index: 1; align-self: start; min-width: 0; }
 #zoea-archive #dossier-entry .works-lock:not([hidden]) {
   display: grid;
-  grid-template-areas: "label label" "fields fields" "hint contact" "error error";
+  grid-template-areas: "label label" "fields fields" "hint hint" "contact contact" "error error";
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0 10px;
   width: min(100%, 408px);
@@ -266,7 +268,7 @@ html:lang(en) #zoea-archive #dossier-entry h2 {
 }
 #zoea-archive #dossier-entry .works-lock .file-source {
   grid-area: contact;
-  justify-self: end;
+  justify-self: start;
   align-self: start;
   min-height: 36px;
   margin: 5px 0 0;
@@ -344,7 +346,7 @@ html:lang(en) #zoea-archive #dossier-entry h2 {
   #dossier-entry .entry-landscape { height: 113px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  #dossier-entry[open] .entry-sheet { animation: dossier-entry-reveal 170ms ease-out; }
+  #dossier-entry[open] .entry-sheet { animation: dossier-entry-reveal calc(170ms * var(--crt-duration-scale)) ease-out; }
   @keyframes dossier-entry-reveal {
     from { opacity: .55; }
     to { opacity: 1; }

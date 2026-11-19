@@ -15,7 +15,7 @@
   const factor = Math.SQRT2;
   let width = 0, height = 0, scale = 1, left = 0, top = 0;
   let viewWidth = 0, viewHeight = 0, lastWheel = 0, pinchStartScale = 0;
-  let closingAnimation;
+  let closingAnimation, zoomOpener;
 
   // Wrapped captions and controls take up real space, especially beside a portrait.
   const bar = viewer.querySelector('.dossier-modal-bar');
@@ -34,15 +34,17 @@
   chromeSize.observe(footer);
 
   const clamp = (value,low,high)=>Math.max(low,Math.min(high,value));
-  const minimum = ()=>Math.max(viewWidth/width,viewHeight/height);
+  const minimum = ()=>Math.min(viewWidth/width,viewHeight/height);
   const maximum = ()=>Math.max(4,minimum()*4);
   const center = ()=>({x:viewWidth/2,y:viewHeight/2});
   function cue(action) {
     root.dispatchEvent(new CustomEvent('dossier-action',{detail:action}));
   }
   function paint() {
-    left = clamp(left,Math.min(0,viewWidth-width*scale),0);
-    top = clamp(top,Math.min(0,viewHeight-height*scale),0);
+    const spareX = viewWidth - width*scale;
+    const spareY = viewHeight - height*scale;
+    left = spareX >= 0 ? spareX/2 : clamp(left,spareX,0);
+    top = spareY >= 0 ? spareY/2 : clamp(top,spareY,0);
     image.style.transform = 'translate('+left+'px,'+top+'px) scale('+scale+')';
     level.value = Math.round(scale*100)+'%';
     minus.disabled = scale<=minimum()+.0001;
@@ -60,9 +62,10 @@
     const box = viewport.getBoundingClientRect();
     return {x:event.clientX-box.left,y:event.clientY-box.top};
   }
-  function open(anchor) {
+  function open(opener,anchor) {
     const source = original.querySelector('img');
     if (inspector.open || !viewer.open || original.hidden || launch.disabled || !source?.naturalWidth) return;
+    zoomOpener = opener;
     width = source.naturalWidth;
     height = source.naturalHeight;
     image.style.width = width+'px';
@@ -75,7 +78,7 @@
     viewWidth = viewport.clientWidth;
     viewHeight = viewport.clientHeight;
     const fit = original.clientWidth/width;
-    scale = clamp(Math.max(1,fit*1.8),minimum(),maximum());
+    scale = anchor ? clamp(Math.max(1,fit*1.8),minimum(),maximum()) : minimum();
     const bounds = viewport.getBoundingClientRect();
     const targetX = anchor ? clamp(anchor.x-bounds.left,0,viewWidth) : viewWidth/2;
     const targetY = anchor ? clamp(anchor.y-bounds.top,0,viewHeight) : viewHeight/2;
@@ -104,14 +107,15 @@
     inspector.removeAttribute('data-closing');
     inspector.close();
   }
-  launch.addEventListener('click',()=>open());
+  launch.addEventListener('click',()=>open(launch));
+  original.addEventListener('click',()=>open(original));
   original.addEventListener('wheel',event=>{
     if (event.deltaY>=0 || launch.disabled || inspector.open) return;
     event.preventDefault();
     const box = original.getBoundingClientRect();
     const u = clamp((event.clientX-box.left)/box.width,0,1);
     const v = clamp((event.clientY-box.top)/box.height,0,1);
-    open({u,v,x:event.clientX,y:event.clientY});
+    open(original,{u,v,x:event.clientX,y:event.clientY});
   },{passive:false});
   viewport.addEventListener('wheel',event=>{
     event.preventDefault();
@@ -136,7 +140,8 @@
     image.removeAttribute('style');
     image.alt = title.textContent = '';
     width = height = 0;
-    if (viewer.open && !launch.disabled) launch.focus({preventScroll:true});
+    if (viewer.open && !launch.disabled) zoomOpener?.focus({preventScroll:true});
+    zoomOpener = null;
   });
   for (const event of ['crt-view','dossier-lock']) root.addEventListener(event,()=>close(false));
   viewer.addEventListener('close',()=>{if (!viewer.open) close(false);});
@@ -192,8 +197,9 @@
   new ResizeObserver(()=>{
     if (!inspector.open || !width) return;
     const oldCenter = center();
+    const wasFitted = minus.disabled;
     viewWidth = viewport.clientWidth;
     viewHeight = viewport.clientHeight;
-    scaleAt(scale,oldCenter,center());
+    scaleAt(wasFitted ? minimum() : scale,oldCenter,center());
   }).observe(viewport);
 })();
