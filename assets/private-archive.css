@@ -109,6 +109,9 @@
   max-width: calc(100vw - 18px); max-height: none; margin: auto; font-family: var(--terminal-font);
 }
 #dossier-reader { width: min(645px,88vw); }
+#zoea-archive #dossier-reader {
+  --rest-x: 0deg; --rest-y: 0deg; --preview-distance: max(1500px,140vw);
+}
 #zoea-archive #dossier-lightbox {
   --rest-x: .4deg; --rest-y: -.7deg; --preview-distance: max(1400px,135vw);
   --art-ratio: 1.78; --side-width: 0px; --detail-rail: clamp(230px,22vw,320px); --frame-edge: 8px; --art-limit: min(1420px,95vw);

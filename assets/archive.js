@@ -542,7 +542,8 @@
     label.append(headingDisplay);
     if (!dossierHeadingReady) {
       dossierHeadingReady = true;
-      window.createCrt(headingDisplay,{closeup:true});
+      // The reader's glass already projects the title with the surrounding text.
+      window.createCrt(headingDisplay,{closeup:true,bendScale:0});
       if (!headingDisplay.crtLive) { headingDisplay.remove(); return; }
       headingDisplay.crtLive.setScene(drawDossierHeading,false);
       new ResizeObserver(()=>headingDisplay.crtLive.invalidate()).observe(headingDisplay);
@@ -1131,14 +1132,14 @@
   }
   const dossierImage = find('#dossier-lightbox');
   const artworkBend = .52;
-  window.bindDossierCurve(dossierReader);
+  window.bindDossierCurve(dossierReader,.20);
   window.bindDossierCurve(dossierImage,artworkBend);
   const inspector = find('#dossier-zoom');
   window.bindDossierCurve(inspector,.36);
   const inspectorTilt = bindGlassTilt(inspector,inspector.querySelector('.preview-glass'),.24);
   inspector.addEventListener('close',inspectorTilt.resetTilt);
   window.zoeaDossier.bindWindows(
-    bindPreview(dossierReader,dossierReader.querySelector('.preview-glass'),[],.48),
+    bindPreview(dossierReader,dossierReader.querySelector('.preview-glass'),[],.14),
     bindPreview(dossierImage,dossierImage.querySelector('.preview-glass'),[],.43)
   );
   const assetPanel = assetViewer.querySelector('.asset-viewport');

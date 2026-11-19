@@ -35,7 +35,7 @@ window.crtIconMask = (() => {
   };
 })();
 
-window.createCrt = function createCrt(root,{closeup=false}={}) {
+window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
   const geometry = window.crtGeometry;
   const source = root.querySelector('.crt-signal');
   const canvas = document.createElement('canvas');
@@ -298,7 +298,7 @@ window.createCrt = function createCrt(root,{closeup=false}={}) {
       y += (targetY-y)*(1-Math.exp(-dt*10));
       presence += (Number(pointerInside)-presence)*(1-Math.exp(-dt*14));
     }
-    const bend = geometry.bend, tilt = geometry.tilt;
+    const bend = geometry.bend*bendScale, tilt = geometry.tilt;
     const pointerX = x*tilt, pointerY = y*tilt;
     updateHitAreas?.(pointerX,pointerY,bend);
     const redraw = lastScene === -Infinity || (animateSignal && !reduced.matches && now-lastScene >= 15);
