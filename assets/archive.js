@@ -73,6 +73,66 @@
   const graphemes = new Intl.Segmenter();
   let refreshLabels;
   let labelLayout;
+  const coverAnimations = new Map();
+
+  function paintCardImage({image,imageBox}, lit=false) {
+    const animation = coverAnimations.get(image);
+    const sheet = animation?.strip.naturalWidth ? animation.strip : image;
+    const frames = sheet === animation?.strip ? animation.durations.length : 1;
+    const width = imageBox.width-2, height = imageBox.height-2;
+    if (width<=0 || height<=0) return;
+    labelsCtx.save();
+    labelsCtx.globalAlpha = 1;
+    labelsCtx.fillStyle = '#100b08';
+    labelsCtx.fillRect(imageBox.left+1,imageBox.top+1,width,height);
+    if (sheet?.complete && sheet.naturalWidth) {
+      const cellWidth = sheet.naturalWidth/frames;
+      const scale = Math.max(width/cellWidth,height/sheet.naturalHeight);
+      const sw = width/scale, sh = height/scale;
+      const start = frames>1 ? animation.frame*cellWidth : 0;
+      labelsCtx.filter = 'grayscale(1) brightness(.62)';
+      labelsCtx.drawImage(sheet,start+(cellWidth-sw)/2,(sheet.naturalHeight-sh)/2,sw,sh,
+        imageBox.left+1,imageBox.top+1,width,height);
+    }
+    if (lit) {
+      labelsCtx.filter = 'none';
+      labelsCtx.fillStyle = 'rgba(255,255,255,.08)';
+      labelsCtx.fillRect(imageBox.left+1,imageBox.top+1,width,height);
+    }
+    labelsCtx.restore();
+  }
+
+  // Canvas samples only the default frame of a GIF. Advance the matching sprite strip
+  // at its authored frame times, updating just the card interior in the cached labels.
+  if (root.crtLive) for (const image of worksDirectory.querySelectorAll('img[data-strip]')) {
+    const durations = image.dataset.frameMs.split(',').map(Number);
+    const animation = {strip:new Image(),durations,frame:0};
+    coverAnimations.set(image,animation);
+    let timer, visible = false;
+    function update() {
+      clearTimeout(timer);
+      if (!visible || document.hidden || root.querySelector('dialog[open]')) return;
+      const card = labelLayout?.cardLayouts.find(item=>item.image===image);
+      if (!card || !animation.strip.naturalWidth) return;
+      if (reduced.matches) animation.frame = 0;
+      paintCardImage(card,card.open.matches(':hover,:focus-visible'));
+      root.crtLive.invalidate();
+      if (!reduced.matches) timer = setTimeout(()=>{
+        animation.frame = (animation.frame+1)%durations.length;
+        update();
+      },durations[animation.frame]);
+    }
+    const visibility = new IntersectionObserver(([entry])=>{
+      visible = entry.isIntersecting;
+      update();
+    });
+    visibility.observe(image.closest('.dossier-card'));
+    animation.strip.onload = update;
+    animation.strip.src = image.dataset.strip;
+    document.addEventListener('visibilitychange',update);
+    reduced.addEventListener('change',update);
+    root.addEventListener('close',update,true);
+  }
 
   function updateHitAreas(w,h) {
     const screen = display.getBoundingClientRect();
@@ -231,7 +291,7 @@
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
     const example = file?.querySelector('.asset-example');
-    const cardLayouts = [...worksReady.querySelectorAll('.dossier-card')]
+    const cardLayouts = [...worksDirectory.querySelectorAll('.dossier-card')]
       .filter(card=>card.dataset.project && card.getClientRects().length)
       .map(card=>({
         box:measureBox(card),
@@ -243,7 +303,7 @@
     const shelf = find('#dossier-student-projects');
     const bay = find('.dossier-bay');
     return {layout,cardLayouts,shelfBox:shelf.getClientRects().length ? measureBox(shelf) : null, bay:bay.getClientRects().length ? measureBox(bay) : null,
-      engravings:[...worksReady.querySelectorAll('.dossier-metal')].filter(mark=>mark.getClientRects().length)
+      engravings:[...worksDirectory.querySelectorAll('.dossier-metal')].filter(mark=>mark.getClientRects().length)
         .map(mark=>({box:measureBox(mark), horizontal:mark.classList.contains('cassette-grip')})),
       dossierBars:[...worksReady.querySelectorAll('.dossier-resume-launch,.dossier-lock,.dossier-group-toggle')]
         .filter(button=>button.getClientRects().length).map(button=>({
@@ -323,18 +383,7 @@
       for (const {box,imageBox,image,open,corners} of cardLayouts) {
         const lit = highlighted(open);
         labelsCtx.globalAlpha = 1;
-        labelsCtx.fillStyle = '#100b08';
-        labelsCtx.fillRect(imageBox.left,imageBox.top,imageBox.width,imageBox.height);
-        if (image?.naturalWidth && image.complete) {
-          const width = imageBox.width-2, height = imageBox.height-2;
-          const scale = Math.max(width/image.naturalWidth,height/image.naturalHeight);
-          const sw = width/scale, sh = height/scale;
-          labelsCtx.save();
-          labelsCtx.filter = 'grayscale(1) brightness(.62)';
-          labelsCtx.drawImage(image,(image.naturalWidth-sw)/2,(image.naturalHeight-sh)/2,sw,sh,
-            imageBox.left+1,imageBox.top+1,width,height);
-          labelsCtx.restore();
-        }
+        paintCardImage({image,imageBox});
         if (lit) {
           labelsCtx.fillStyle = '#fff';
           labelsCtx.globalAlpha = .08;

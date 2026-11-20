@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="下载像素龙娘GPT小龙娘，安装为 ChatGPT 自定义宠物。">
+  <title>GPT小龙娘</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, "Microsoft YaHei UI", sans-serif;
+      background: #17151c;
+      color: #f6f1f8;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; }
+    main {
+      width: min(960px, calc(100% - 40px));
+      min-height: 100svh;
+      margin-inline: auto;
+      padding-block: 56px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+      gap: clamp(28px, 6vw, 76px);
+      align-content: center;
+      align-items: center;
+    }
+    h1 { font-size: clamp(3.3rem, 8vw, 6.2rem); line-height: 1; margin: 0 0 10px; }
+    p { line-height: 1.65; }
+    .name { color: #d0b7ee; margin: 0; font-size: 1.35rem; }
+    .description { max-width: 34ch; margin: 24px 0; color: #e0d9e7; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #766688;
+      border-radius: 9px;
+      color: #f6f1f8;
+      padding: 10px 14px;
+      min-height: 44px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .button.install { background: #dcc3fc; border-color: #dcc3fc; color: #21172d; }
+    .button:hover { background: #3b3048; }
+    .button.install:hover { background: #ead7ff; }
+    :focus-visible { outline: 3px solid #e7caff; outline-offset: 3px; }
+    .help { margin: 16px 0 0; color: #c8bdd1; font-size: .9rem; }
+    .help a { color: #dcc3fc; text-underline-offset: 3px; }
+    figure {
+      margin: 0;
+      padding: 16px;
+      background: #282232;
+      border: 1px solid #4f405e;
+      border-radius: 18px;
+    }
+    video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 12 / 13;
+      background: #1f1928;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+    figcaption { margin-top: 12px; color: #dfd3e8; font-size: .9rem; }
+    @media (max-width: 720px) {
+      main { grid-template-columns: minmax(0, 1fr); max-width: 420px; padding-block: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section aria-labelledby="name">
+      <h1 id="name">GPT小龙娘</h1>
+      <p class="name" lang="en">Dragon Girl</p>
+      <p class="description">白发紫瞳的像素龙娘。下载图集，把她装进你的 ChatGPT 宠物库。</p>
+      <div class="actions">
+        <a class="button install" id="install" hidden>在桌面端安装</a>
+        <a class="button" href="./spritesheet-extended.png" download>下载桌面版</a>
+        <a class="button" href="./spritesheet-web-v1.png" download>下载网页版</a>
+      </div>
+      <p class="help" id="install-hint">将此页部署到 HTTPS 站点后即可生成桌面安装入口。</p>
+      <p class="help">网页端可在「设置 → 个性化 → 宠物」中上传 v1 图集。</p>
+      <p class="help">ZOEA 制作 · AI 辅助生成 · <a href="./LICENSE.txt">个人使用许可</a></p>
+    </section>
+    <figure>
+      <video controls playsinline preload="metadata" poster="./preview-still.png" aria-label="GPT小龙娘的九种基础动作">
+        <source src="./preview.mp4" type="video/mp4">
+        <a href="./preview.mp4">下载动画预览</a>
+      </video>
+      <figcaption>九种基础动作预览</figcaption>
+    </figure>
+  </main>
+  <script>
+    const install = document.getElementById("install");
+    const installHint = document.getElementById("install-hint");
+
+    if (window.location.protocol === "https:") {
+      const link = new URL("codex://pets/install");
+      const sprite = new URL("./spritesheet-extended.png", window.location.href);
+      link.searchParams.set("name", "GPT小龙娘");
+      link.searchParams.set("imageUrl", sprite.href);
+      link.searchParams.set("description", "ZOEA 制作的像素龙娘");
+      link.searchParams.set("spriteVersionNumber", "2");
+      install.href = link.href;
+      install.hidden = false;
+      installHint.textContent = "安装按钮会打开支持宠物安装的 ChatGPT 桌面端。";
+    }
+  </script>
+</body>
+</html>

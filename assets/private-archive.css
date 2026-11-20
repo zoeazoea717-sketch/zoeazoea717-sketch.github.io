@@ -91,11 +91,16 @@
 #zoea-archive .dossier-card-kind { grid-row: 2; grid-column: 2; color: #deb081; font-size: clamp(12px,4.4cqw,14px); line-height: 1.35; }
 #zoea-archive .dossier-card-media { position: relative; isolation: isolate; display: block; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: #100b08; border: 1px solid #9d693e; pointer-events: none; }
 #zoea-archive .dossier-card-media img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; filter: grayscale(1); }
+#zoea-archive .dossier-card-media .dragon-girl-still { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  #zoea-archive .dossier-card-media img[data-strip] { display: none; }
+  #zoea-archive .dossier-card-media .dragon-girl-still { display: block; }
+}
 #zoea-archive .dossier-card-media::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg,#140a0390 0 1px,transparent 1px 3px), #ffc58a; mix-blend-mode: multiply; }
 #zoea-archive .dossier-pagination { display: inline-flex; align-items: center; flex: none; }
 #zoea-archive .dossier-pagination button { min-width: 44px; min-height: 42px; font-size: 19px; }
 #zoea-archive .dossier-frame-count { color: #edc997; white-space: nowrap; font-size: clamp(12px,1vw,15px); font-variant-numeric: tabular-nums; }
-#zoea-archive.crt-live-ready .works-unlocked :is(.dossier-resume-launch,.dossier-lock,.dossier-group-toggle,.dossier-bay,.dossier-card,.dossier-card-media) {
+#zoea-archive.crt-live-ready .works-directory :is(.dossier-resume-launch,.dossier-lock,.dossier-group-toggle,.dossier-bay,.dossier-card,.dossier-card-media) {
   border-color: transparent; background: transparent; box-shadow: none;
 }
 #zoea-archive.crt-live-ready :is(.dossier-metal,.dossier-corners) { opacity: 0; }
@@ -103,7 +108,7 @@
 #zoea-archive .dossier-surface-hit { display: none; }
 #zoea-archive.crt-live-ready :is(.dossier-card-open,.dossier-resume-launch,.dossier-group-toggle) { position: relative; pointer-events: none; }
 #zoea-archive.crt-live-ready .dossier-surface-hit { display: block; position: absolute; pointer-events: auto; touch-action: pan-y; cursor: pointer; }
-#zoea-archive.crt-live-ready .works-unlocked button:focus-visible { outline: none; }
+#zoea-archive.crt-live-ready :is(.works-unlocked button,.dossier-card-open):focus-visible { outline: none; }
 #zoea-archive .dossier-modal {
   --preview-distance: max(1050px,110vw); --rest-x: .65deg; --rest-y: -1.3deg;
   max-width: calc(100vw - 18px); max-height: none; margin: auto; font-family: var(--terminal-font);
@@ -146,6 +151,8 @@
 #zoea-archive .dossier-modal-footer button:not([data-step]) { padding: 4px 11px; }
 #zoea-archive .dossier-modal-footer .dossier-toggle-info, #zoea-archive .dossier-download { border: 1px solid #a97a47; min-height: 34px; color: #ffe0ac; }
 #zoea-archive .dossier-modal-footer .dossier-film { min-height: 39px; padding-inline: 16px; border: 1px solid #e2a368; background: #8250246e; font-weight: 700; color: #ffe3b3; }
+#zoea-archive .dossier-public-link { display: inline-flex; align-items: center; min-height: 39px; padding: 3px 10px; border: 1px solid #a97a47; color: #ffe0ac; text-decoration: none; }
+#zoea-archive .dossier-public-link:is(:focus-visible,:hover) { background: #ad723438; color: #ffe5bd; }
 #zoea-archive .dossier-player { display: grid; place-items: center; }
 #zoea-archive .dossier-player-status { font-size: 15px; color: var(--pale); }
 #zoea-archive .dossier-status { flex: 1; }

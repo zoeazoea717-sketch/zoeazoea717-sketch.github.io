@@ -12,6 +12,34 @@
   const details = document.getElementById('dossier-details');
   const infoToggle = viewer.querySelector('.dossier-toggle-info');
   const film = viewer.querySelector('.dossier-film');
+  const publicButton = root.querySelector('#public-projects [data-project="dragon-girl"] button');
+  const publicLinks = viewer.querySelectorAll('.dossier-public-link');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const dragonGirl = {
+    id: 'dragon-girl',
+    title: {zh:'GPT小龙娘', en:'Dragon Girl'},
+    medium: {zh:'ChatGPT 智能伙伴', en:'ChatGPT companion'},
+    meta: {zh:'ZOEA · v1.0.1 · AI 辅助制作', en:'ZOEA · v1.0.1 · Created with AI assistance'},
+    description: {
+      zh:'白发紫瞳的像素小龙娘，长着淡紫色龙角、一对小翅膀和卷尾。桌面版包含九种基础动作和十六个注视方向，网页版保留同一套基础动作。',
+      en:'A white-haired pixel dragon with violet eyes, pale purple horns, little wings and a curled tail. The desktop sprite sheet has nine animations and sixteen gaze directions. The web sheet includes the same nine animations.'
+    },
+    sections: [
+      [{zh:'安装', en:'Installation'}, {
+        zh:'桌面端在安装指南中选择「在桌面端安装」，再到客户端确认。ChatGPT Work 网页端可下载 v1 图集，到「设置 → 个性化 → 宠物」上传。账号或工作区需已启用宠物功能。',
+        en:'For desktop, open the installation guide, select the desktop install button and confirm in the app. For ChatGPT Work on the web, download the v1 sprite sheet and upload it in Settings → Personalization → Pets. Pets must be enabled for your account or workspace.'
+      }],
+      [{zh:'使用许可', en:'License'}, {
+        zh:'可免费下载并用于个人非商业用途，也可分享原发布页链接。转载素材、重新打包分发、发布改作或商用，请先联系作者取得授权。',
+        en:'You may download the companion for personal, non-commercial use and share the original release page. Please obtain permission before reposting assets, redistributing the package, publishing adaptations or using it commercially.'
+      }]
+    ],
+    cover: {
+      width:16, height:10, caption:{zh:'默认形态 · 待机', en:'Default form · Idle'},
+      source:()=>publicButton.querySelector(reducedMotion.matches ? '.dragon-girl-still' : 'img[data-strip]').src
+    },
+    film:{kind:'actions',duration:'00:09',source:()=>film.dataset.src}
+  };
   const player = viewer.querySelector('.dossier-player');
   const download = profile.querySelector('.dossier-download');
   const base = new URL('./assets/dossier/', document.baseURI);
@@ -20,7 +48,7 @@
   const zh = () => !document.documentElement.lang.startsWith('en');
   const copy = (chinese, english) => zh() ? chinese : english;
   const read = value => zh() ? value.zh : value.en;
-  let key, dossier, selectedId, profileWindow, imageWindow;
+  let key, dossier, viewerWork, profileWindow, imageWindow;
   let viewerPosition = 0, viewerOpener;
   let gridRevision = 0, viewerRevision = 0, filmRevision = 0;
 
@@ -50,7 +78,6 @@
     const decoded = JSON.parse(new TextDecoder().decode(await decrypt(candidate, index.subarray(16))));
     key = candidate;
     dossier = decoded;
-    selectedId = decoded.projects[0]?.id;
     for (const toggle of directory.querySelectorAll('.dossier-group-toggle')) {
       setGroup(toggle,true);
     }
@@ -93,10 +120,6 @@
     resources.set(item.object, promise);
     promise.catch(() => { if (resources.get(item.object) === promise) resources.delete(item.object); });
     return promise;
-  }
-
-  function project() {
-    return dossier?.projects.find(item=>item.id===selectedId);
   }
 
   function frames(work) {
@@ -166,13 +189,10 @@
       openBtn.append(media,copyBox,hit);
       cardEl.append(corners,openBtn);
 
-      openBtn.addEventListener('click',()=>{
-        selectedId = work.id;
-        openPicture(openBtn);
-      });
+      openBtn.addEventListener('click',()=>openPicture(openBtn,work));
 
       projectGrid.append(cardEl);
-      if (viewer.open && selectedId===work.id) viewerOpener = openBtn;
+      if (viewer.open && viewerWork===work) viewerOpener = openBtn;
       loadImage(item).then(image=>{
         if (revision!==gridRevision) return;
         openBtn.setAttribute('aria-busy','false');
@@ -199,13 +219,13 @@
   async function loadImage(item) {
     const image = el('img');
     image.alt = read(item.caption);
-    image.src = await resourceURL(item);
+    image.src = item.source ? item.source() : await resourceURL(item);
     await image.decode();
     return image;
   }
 
   function showViewerFrame() {
-    const work = project();
+    const work = viewerWork;
     if (!work || !viewer.open) return;
     const items = frames(work);
     const item = items[viewerPosition];
@@ -215,6 +235,8 @@
     viewer.querySelector('.dossier-frame-count').textContent = countText(viewerPosition,items.length);
     viewer.querySelector('.dossier-image-caption').textContent = captionText(item);
     for (const button of viewer.querySelectorAll('[data-step]')) button.disabled = items.length<2;
+    viewer.querySelector('.dossier-pagination').hidden = items.length===1;
+    for (const link of publicLinks) link.hidden = work!==dragonGirl;
     const clip = filmFor(work,viewerPosition);
     film.hidden = !clip;
     if (clip && player.hidden && !film.disabled) film.textContent = '▶　'+playLabel(clip);
@@ -224,7 +246,7 @@
     original.setAttribute('aria-busy','true');
     loadImage(item).then(image=>{
       if (revision!==viewerRevision || !viewer.open) return;
-      image.dataset.object = item.object;
+      if (item.object) image.dataset.object = item.object;
       original.querySelector('img').replaceWith(image);
       original.setAttribute('aria-busy','false');
       enlarge.disabled = false;
@@ -237,9 +259,10 @@
   }
 
   function changeFrame(step) {
-    const work = project();
+    const work = viewerWork;
     if (!work) return;
     const total = frames(work).length;
+    if (total<2) return;
     stopFilm();
     viewerPosition = (viewerPosition+step+total)%total;
     showViewerFrame();
@@ -299,14 +322,15 @@
   }
 
   function updateDetails() {
-    const work = project();
+    const work = viewerWork;
     if (!work) return;
     const pane = details.querySelector('.dossier-details-copy');
     const frame = frames(work)[viewerPosition];
     const introduction = el('div','dossier-copy');
     introduction.append(el('p','',read(work.description)));
-    pane.replaceChildren(el('p','dossier-kind',read(work.medium)),el('h3','dossier-work-title',read(frame.title || frame.caption)),el('p','dossier-meta',read(work.meta)),
-      introduction,section(copy('我的分工','My contribution'),read(work.role)));
+    pane.replaceChildren(el('p','dossier-kind',read(work.medium)),el('h3','dossier-work-title',read(frame.title || frame.caption)),el('p','dossier-meta',read(work.meta)),introduction);
+    if (work.role) pane.append(section(copy('我的分工','My contribution'),read(work.role)));
+    for (const [title,body] of work.sections || []) pane.append(section(read(title),read(body)));
     if (work.awards?.length) {
       const awards = el('section','dossier-copy');
       const list = el('ul');
@@ -348,6 +372,7 @@
   }
 
   function clipLabel(clip) {
+    if (clip.kind==='actions') return copy('动作预览','Preview animations');
     return clip.kind==='model' ? copy('播放展示','Play study') : copy('播放短片','Play film');
   }
 
@@ -368,7 +393,7 @@
     original.hidden = false;
     film.disabled = false;
     viewer.removeAttribute('data-playing');
-    const work = project();
+    const work = viewerWork;
     if (work && viewer.open) {
       const frame = frames(work)[viewerPosition];
       if (frame) viewer.style.setProperty('--art-ratio',frame.width/frame.height);
@@ -378,7 +403,7 @@
   }
 
   async function playFilm() {
-    const work = project();
+    const work = viewerWork;
     const clip = filmFor(work,viewerPosition);
     if (!clip || !viewer.open) return;
     const revision = ++filmRevision;
@@ -393,8 +418,8 @@
     film.disabled = true;
     film.textContent = copy('正在载入…','Loading…');
     try {
-      const url = await resourceURL(clip);
-      if (revision!==filmRevision || !viewer.open || !dossier) return;
+      const url = clip.source ? clip.source() : await resourceURL(clip);
+      if (revision!==filmRevision || !viewer.open || work!==viewerWork) return;
       const video = el('video');
       video.controls = true;
       video.playsInline = true;
@@ -425,14 +450,19 @@
     renderProfile();
     profileContent.scrollTop = 0;
   });
-  function openPicture(opener) {
-    if (!dossier || viewer.open) return;
+  function openPicture(opener,work) {
+    if (viewer.open) return;
+    viewerWork = work;
     viewerOpener = opener;
     viewerPosition = 0;
     imageWindow();
     setDetails(false);
     showViewerFrame();
   }
+  publicButton?.addEventListener('click',()=>openPicture(publicButton,dragonGirl));
+  reducedMotion.addEventListener('change',()=>{
+    if (viewer.open && viewerWork===dragonGirl && player.hidden) showViewerFrame();
+  });
   original.addEventListener('click',()=>{
     if (original.getAttribute('aria-busy')==='true') return;
     if (!original.querySelector('img').hasAttribute('src')) showViewerFrame();
@@ -467,7 +497,8 @@
     image.removeAttribute('data-object');
     image.alt = '';
     details.querySelector('.dossier-details-copy').replaceChildren();
-    if (!directory.hidden && dossier && !root.hidden) viewerOpener?.focus({preventScroll:true});
+    if (viewerOpener?.getClientRects().length) viewerOpener.focus({preventScroll:true});
+    viewerWork = null;
     viewerOpener = null;
   });
   profile.addEventListener('close',()=>{
@@ -497,7 +528,7 @@
     if (profile.open) profile.close();
     if (viewer.open) viewer.close();
     stopFilm();
-    key = dossier = selectedId = null;
+    key = dossier = viewerWork = null;
     byline.textContent = '';
     projectGrid.replaceChildren();
     film.textContent = '';
@@ -517,8 +548,7 @@
     if (profile.open) profile.close();
   });
   document.addEventListener('zoea-language-change',()=>{
-    if (!dossier) return;
-    buildIndex();
+    if (dossier) buildIndex();
     if (profile.open) renderProfile();
     if (viewer.open) showViewerFrame();
   });

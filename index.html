@@ -8,20 +8,20 @@
   <link rel="stylesheet" href="./assets/site.css?v=crt-half-speed-1">
   <link rel="stylesheet" href="./assets/home.css?v=crt-half-speed-1">
   <link rel="stylesheet" href="./assets/archive.css?v=crt-half-speed-1">
-  <link rel="stylesheet" href="./assets/private-archive.css?v=resume-curve-1">
+  <link rel="stylesheet" href="./assets/private-archive.css?v=public-dragon-girl-1">
   <link rel="stylesheet" href="./assets/private-entry.css?v=crt-half-speed-1">
   <link rel="stylesheet" href="./assets/popup.css?v=dossier-file-grid-1">
-  <script defer src="./assets/language.js?v=dossier-cartridges-1"></script>
+  <script defer src="./assets/language.js?v=public-dragon-girl-1"></script>
   <script defer src="./assets/motion.js?v=resume-curve-1"></script>
   <script defer src="./assets/shell.js?v=crt-half-speed-1"></script>
   <script defer src="./assets/terrain.js?v=dossier-sections-1"></script>
   <script defer src="./assets/sound.js?v=single-preview-1"></script>
   <script defer src="./assets/home.js?v=crt-half-speed-1"></script>
   <script defer src="./assets/private-curvature.js?v=art-view-1"></script>
-  <script defer src="./assets/private-archive.js?v=dossier-curated-covers-1"></script>
+  <script defer src="./assets/private-archive.js?v=public-dragon-girl-1"></script>
   <script defer src="./assets/private-image-view.js?v=dossier-color-window-1"></script>
   <script defer src="./assets/private-entry.js?v=crt-half-speed-1"></script>
-  <script defer src="./assets/archive.js?v=resume-curve-1"></script>
+  <script defer src="./assets/archive.js?v=public-dragon-girl-1"></script>
   <script defer src="./assets/keyboard.js?v=polish-preview-1"></script>
 </head>
 <body>
@@ -67,7 +67,25 @@
         <div class="tool-directory works-directory" hidden>
           <section aria-labelledby="public-works-title">
             <h2 class="public-works-bar" id="public-works-title" data-file-text data-i18n="publicWorks">公开作品</h2>
-            <p class="directory-note" data-file-text data-i18n="publicEmpty">公开展示区整理归档中，暂未开放目录。</p>
+            <div id="public-projects" class="dossier-shelf dossier-card-grid">
+              <article class="dossier-card" data-project="dragon-girl">
+                <i class="dossier-corners" aria-hidden="true"></i>
+                <button class="dossier-card-open" type="button" data-dossier-control aria-haspopup="dialog" aria-controls="dossier-lightbox" aria-labelledby="dragon-girl-title dragon-girl-kind">
+                  <span class="dossier-card-media">
+                    <img src="./assets/dragon-girl-idle.gif" data-strip="./assets/dragon-girl-idle-strip.png" data-frame-ms="280,110,110,140,140,320" alt="">
+                    <img class="dragon-girl-still" src="./assets/dragon-girl-still.png" alt="">
+                  </span>
+                  <span class="dossier-card-copy">
+                    <span class="dossier-card-number" data-works-text>01</span>
+                    <span class="dossier-card-tag" data-works-text data-i18n="dragonGirlTag">像素</span>
+                    <strong class="dossier-card-name" id="dragon-girl-title" data-works-text data-i18n="dragonGirlTitle">GPT小龙娘</strong>
+                    <span class="dossier-card-kind" id="dragon-girl-kind" data-works-text data-i18n="dragonGirlKind">ChatGPT 智能伙伴</span>
+                    <i class="dossier-metal dossier-pins" aria-hidden="true"></i>
+                  </span>
+                  <span class="dossier-surface-hit dossier-card-hit" aria-hidden="true"></span>
+                </button>
+              </article>
+            </div>
           </section>
           <section>
             <h2><button type="button" class="tool-disclosure" data-group="private" aria-controls="dossier-entry" data-file-text aria-haspopup="dialog">[LOCKED] 个人档案</button></h2>
@@ -356,7 +374,9 @@
             <button type="button" data-step="1" aria-label="下一张" data-i18n-label="nextFrame">→</button>
           </div>
           <span class="dossier-image-caption" role="status"></span>
-          <button type="button" class="dossier-film" hidden></button>
+          <button type="button" class="dossier-film" id="public-dragon-girl-film" data-src="./downloads/dragon-girl/preview.mp4" hidden></button>
+          <a class="dossier-public-link" href="./downloads/dragon-girl/index.html" target="_blank" rel="noopener" hidden><span data-i18n="dragonGirlInstall">安装指南</span></a>
+          <a class="dossier-public-link" href="./downloads/GPT-Dragon-Girl-v1.0.1.zip" download hidden><span data-i18n="dragonGirlDownload">下载作品包</span></a>
           <button type="button" class="dossier-toggle-info" aria-expanded="false" aria-controls="dossier-details"></button>
         </div>
       </div>
