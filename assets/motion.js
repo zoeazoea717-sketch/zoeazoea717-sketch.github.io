@@ -35,7 +35,7 @@ window.crtIconMask = (() => {
   };
 })();
 
-window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
+window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSurface=root}={}) {
   const geometry = window.crtGeometry;
   const source = root.querySelector('.crt-signal');
   const canvas = document.createElement('canvas');
@@ -46,7 +46,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
   const fragment = '#version 300 es\n' + [
     'precision highp float;',
     'out vec4 color;',
-    'uniform vec2 size, viewport, pointer;',
+    'uniform vec2 size, viewport, pointer, signalY;',
     'uniform vec4 panel, writeBounds, entryCaret, artwork;',
     'uniform vec3 writeEdge;',
     'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime, bend;',
@@ -59,9 +59,9 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
     '}',
     'float panelGraticule(vec2 p, vec2 extent){',
     '  vec2 inset=min(vec2(18.),extent*.07);',
-    '  vec2 interior=max(vec2(1.),extent-2.*inset);',
+    '  vec2 interior=max(vec2(1.),viewport-2.*inset);',
     '  vec2 cell=interior/vec2(8.,6.);',
-    '  vec2 centered=p-extent*.5;',
+    '  vec2 centered=p+(panel.xy-.5)*viewport;',
     '  vec2 grid=abs(fract(centered/cell+.5)-.5)*cell;',
     '  vec2 norm=abs(centered)/(interior*.5);',
     '  float envelope=exp(-1.45*dot(norm,norm));',
@@ -143,17 +143,18 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
     '  vec2 q=glassUV;',
     '  float depth=smoothstep(.56,1.,q.y);',
     '  if(home) q.x-=pointer.x*.003*depth;',
+    '  vec2 sampleUV=vec2(q.x,q.y*signalY.x+signalY.y);',
     // The artwork uses the same projected texture coordinates and reveal as its amber frame.
     '  if(artwork.z>artwork.x && all(greaterThanEqual(q,artwork.xy)) && all(lessThan(q,artwork.zw))){',
     '    bool writing=entering || (panelRefresh<1. && all(greaterThanEqual(q,writeBounds.xy)) && all(lessThanEqual(q,writeBounds.zw)));',
     '    float visibility=power*(writing ? 1.-smoothstep(writeEdge.y,writeEdge.z,q.x) : 1.);',
     '    float scanline=.985+.015*cos(6.2831853*q.y*viewport.y/3.);',
-    '    color=vec4(texture(signalTex,q).rgb*scanline,1.)*visibility;',
+    '    color=vec4(texture(signalTex,sampleUV).rgb*scanline,1.)*visibility;',
     '    return;',
     '  }',
-    '  float sharp=texture(signalTex,q).r;',
-    '  float diffuse=textureLod(signalTex,q,home ? 2.8 : 1.75).r;',
-    '  float halo=textureLod(signalTex,q,home ? 4.65 : 3.3).r;',
+    '  float sharp=texture(signalTex,sampleUV).r;',
+    '  float diffuse=textureLod(signalTex,sampleUV,home ? 2.8 : 1.75).r;',
+    '  float halo=textureLod(signalTex,sampleUV,home ? 4.65 : 3.3).r;',
     '  float edge=(home ? .09 : .08)+.24*clamp((radius-.25)/1.4,0.,1.);',
     '  float emission=mix(sharp,diffuse,edge);',
     '  float lines=home ? min(232.,viewport.y/2.15) : min(180.,viewport.y/2.2);',
@@ -247,7 +248,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
   gl.useProgram(program);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   const uniforms = Object.fromEntries(
-    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','entryTime','entryCaret','bend','artwork']
+    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','signalY','entryTime','entryCaret','bend','artwork']
       .map(name => [name, gl.getUniformLocation(program, name)])
   );
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -256,6 +257,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.uniform1i(uniforms.signalTex, 0);
+  gl.uniform2f(uniforms.signalY,1,0);
   const home = root.id === 'zoea-monitor';
   gl.uniform1i(uniforms.home, home ? 1 : 0);
   gl.uniform1i(uniforms.closeup, closeup ? 1 : 0);
@@ -288,8 +290,8 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
     frame = 0;
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h || document.hidden || root.hidden) return;
-    const dt = last ? (now-last)/1000 : 0;
-    last = now;
+    const dt = last ? Math.max(0,now-last)/1000 : 0;
+    last = Math.max(last,now);
     const entryTime = reduced.matches ? -1 : root.crtEntryTime?.(now) ?? -1;
     const holdHome = home && entryTime>=0;
     if (!holdHome) {
@@ -320,7 +322,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
     gl.uniform1f(uniforms.bend, bend);
     gl.uniform1f(uniforms.pointerPresence,presence);
     gl.uniform4fv(uniforms.panel,panelBounds);
-    const bounds = writeBounds ?? panelBounds;
+    const bounds = (typeof writeBounds === 'function' ? writeBounds() : writeBounds) ?? panelBounds;
     const elapsed = reduced.matches ? 1 : cap((now-refreshStart)/geometry.panelWriteMs,0,1);
     const progress = panelWriteProgress(elapsed);
     const enteringArchive = !home && entryTime>=0;
@@ -351,7 +353,8 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
   root.addEventListener('pointermove', event => {
     if (reduced.matches || event.pointerType === 'touch') return;
     pointerInside = true;
-    const rect = root.getBoundingClientRect();
+    const rect = pointerSurface.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
     targetX = cap((event.clientX-rect.left)/rect.width*2-1, -1, 1);
     targetY = cap((event.clientY-rect.top)/rect.height*2-1, -1, 1);
   });
@@ -401,6 +404,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1}={}) {
   }
 
   root.crtLive = {
+    setSignalY(scale,offset) { gl.uniform2f(uniforms.signalY,scale,offset); },
     setPanel(bounds) { panelBounds = bounds; },
     setArtworkBounds(bounds) { gl.uniform4fv(uniforms.artwork,bounds); },
     setHitAreaUpdater(update) { updateHitAreas = update; },

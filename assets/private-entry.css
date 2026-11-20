@@ -171,7 +171,6 @@ html:lang(en) #zoea-archive #dossier-entry h2 {
   font-family: var(--terminal-font);
 }
 #zoea-archive #dossier-entry .works-lock[hidden],
-#zoea-archive #dossier-entry .works-lock-title,
 #zoea-archive #dossier-entry .access-error[hidden] { display: none; }
 #zoea-archive #dossier-entry :is([data-works-text], [data-file-text]) {
   color: var(--pale);

@@ -18,20 +18,20 @@
   const dragonGirl = {
     id: 'dragon-girl',
     title: {zh:'GPT小龙娘', en:'Dragon Girl'},
-    medium: {zh:'ChatGPT 智能伙伴', en:'ChatGPT companion'},
+    medium: {zh:'ChatGPT 智能伙伴', en:'ChatGPT Companion'},
     meta: {zh:'ZOEA · v1.0.1 · AI 辅助制作', en:'ZOEA · v1.0.1 · Created with AI assistance'},
     description: {
-      zh:'白发紫瞳的像素小龙娘，长着淡紫色龙角、一对小翅膀和卷尾。桌面版包含九种基础动作和十六个注视方向，网页版保留同一套基础动作。',
-      en:'A white-haired pixel dragon with violet eyes, pale purple horns, little wings and a curled tail. The desktop sprite sheet has nine animations and sixteen gaze directions. The web sheet includes the same nine animations.'
+      zh:'白发紫瞳的像素风小龙娘，生着淡紫色龙角、一对小翅膀和微卷的尾巴。桌面版收录 9 种基础动作与 16 个注视方向，网页版保留同一套基础动作。',
+      en:'A white-haired pixel-art dragon girl with violet eyes, pale purple horns, little wings, and a curled tail. The desktop sprite sheet includes 9 base animations and 16 gaze directions, while the web version retains the same 9 base animations.'
     },
     sections: [
       [{zh:'安装', en:'Installation'}, {
-        zh:'桌面端在安装指南中选择「在桌面端安装」，再到客户端确认。ChatGPT Work 网页端可下载 v1 图集，到「设置 → 个性化 → 宠物」上传。账号或工作区需已启用宠物功能。',
-        en:'For desktop, open the installation guide, select the desktop install button and confirm in the app. For ChatGPT Work on the web, download the v1 sprite sheet and upload it in Settings → Personalization → Pets. Pets must be enabled for your account or workspace.'
+        zh:'桌面端请在安装指南中点击「在桌面端安装」，随后在客户端内确认导入。ChatGPT Work 网页端可下载 v1 图集，前往「设置 → 个性化 → 宠物」上传。使用前需确保账号或工作区已开启宠物功能。',
+        en:'For desktop, open the installation guide, select the desktop install option, and confirm in the app. For ChatGPT Work on the web, download the v1 sprite sheet and upload it under Settings → Personalization → Pets. Requires the Pets feature to be enabled on your account or workspace.'
       }],
       [{zh:'使用许可', en:'License'}, {
-        zh:'可免费下载并用于个人非商业用途，也可分享原发布页链接。转载素材、重新打包分发、发布改作或商用，请先联系作者取得授权。',
-        en:'You may download the companion for personal, non-commercial use and share the original release page. Please obtain permission before reposting assets, redistributing the package, publishing adaptations or using it commercially.'
+        zh:'可免费下载并用于个人非商业用途，欢迎分享原发布页链接。如需转载素材、重新打包分发、发布衍生改作或用于商业用途，请先联系作者获取授权。',
+        en:'Free to download for personal, non-commercial use. Sharing the original release page link is welcome. Please contact the author for permission before reposting assets, redistributing the package, publishing derivative works, or using it commercially.'
       }]
     ],
     cover: {

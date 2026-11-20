@@ -1,6 +1,6 @@
 #zoea-archive {
     --gold:#ffd282; --pale:#ffe5ad; --dim:#c39a70;
-    position:relative; isolation:isolate; overflow:hidden;
+    position:relative; isolation:isolate; overflow:clip;
     color: var(--pale);
     font: calc(14px * var(--crt-text-scale))/1.5 var(--terminal-font);
     --inset:clamp(18px,6vw,64px);
@@ -79,7 +79,7 @@
   }
   #zoea-archive.crt-ready h1 { color:transparent; }
   #zoea-archive .display {
-    position:absolute; inset:0; z-index:-1;
+    position:fixed; inset:0 0 auto; height:100dvh; z-index:-1; pointer-events:none;
   }
   #zoea-archive canvas { display:block; width:100%; height:100%; }
   #zoea-archive .index {
@@ -94,21 +94,6 @@
   #zoea-archive .list button::before { content:">"; visibility:hidden; margin-right:.45em; color:var(--gold); }
   #zoea-archive .list button:first-child::before { margin-left:-.92em; }
   #zoea-archive .list button[aria-pressed="true"]::before { visibility:visible; }
-  #zoea-archive .works-lock:not([hidden]) {
-    display:grid; gap:8px; justify-self:center;
-    width:min(100%,calc(32rem * var(--crt-text-scale)));
-    margin-top:clamp(18px,4vh,46px);
-    padding:clamp(14px,3vw,30px);
-    border:1px solid #d28e5270;
-  }
-  #zoea-archive .works-lock-title { display:flex; align-items:center; gap:.6em; margin-bottom:.45em; }
-  #zoea-archive .works-lock-title h3 { margin:0; font-size:1.35em; line-height:1.25; }
-  #zoea-archive .works-lock-symbol { display:block; position:relative; width:1.4em; height:1.4em; flex:none; }
-  #zoea-archive .works-lock-symbol::before,
-  #zoea-archive .works-lock-symbol::after { content:""; position:absolute; border:1px solid currentColor; }
-  #zoea-archive .works-lock-symbol::before { inset:7% 28% 44%; border-radius:55% 55% 0 0; }
-  #zoea-archive .works-lock-symbol::after { inset:43% 15% 8%; background:#241104; }
-  #zoea-archive .works-lock-fields { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
   #zoea-archive .works-lock :is(input,button) {
     min-width:0; min-height:44px; padding:4px .62em;
     font:inherit; color:var(--pale); background:#160b0580; border:1px solid #d28e5290;
@@ -117,7 +102,6 @@
   #zoea-archive .works-lock :is(input,button):focus-visible { outline:1px solid var(--gold); outline-offset:2px; }
   #zoea-archive .works-lock :is(p,label) { margin:0; color:var(--dim); }
   #zoea-archive #zoea-works-access-status { color:var(--pale); }
-  #zoea-archive .works-directory .works-lock { margin:0 auto; border:0; }
   #zoea-archive .works-directory .public-works-bar {
     margin:0; padding:8px clamp(10px,1.2vw,16px);
     background:#d28e521e; border-bottom:1px solid #d28e5270;
@@ -128,14 +112,9 @@
   #zoea-archive .access-error p { padding:10px 12px 0; }
   #zoea-archive .access-error button { margin:4px 12px; text-decoration:underline; }
   #zoea-archive .key-guide { color:var(--dim); font-size:calc(12px * var(--crt-text-scale)); }
-  #zoea-archive.crt-live-ready :is(.works-directory .public-works-bar,.access-error,.access-error .file-bar) {
+  #zoea-archive.crt-live-ready .works-directory .public-works-bar {
     background:transparent; border-color:transparent;
   }
-  #zoea-archive.crt-ready.crt-live-ready :is(.works-lock,.works-lock-fields :is(input,button)) {
-    background:transparent; border-color:transparent;
-  }
-  #zoea-archive.crt-ready.crt-live-ready .works-lock-symbol { visibility:hidden; }
-  #zoea-archive.crt-ready.crt-live-ready .works-lock input:focus-visible { outline:none; }
   #zoea-archive .tool-directory {
     container:tool-directory / inline-size;
     justify-self:stretch; min-width:0; margin-top:clamp(8px,1.8vw,22px);

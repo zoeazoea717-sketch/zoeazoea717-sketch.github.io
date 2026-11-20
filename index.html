@@ -7,21 +7,21 @@
   <title>ZOEA</title>
   <link rel="stylesheet" href="./assets/site.css?v=crt-half-speed-1">
   <link rel="stylesheet" href="./assets/home.css?v=crt-half-speed-1">
-  <link rel="stylesheet" href="./assets/archive.css?v=crt-half-speed-1">
+  <link rel="stylesheet" href="./assets/archive.css?v=entry-modal-only-1">
   <link rel="stylesheet" href="./assets/private-archive.css?v=public-dragon-girl-1">
-  <link rel="stylesheet" href="./assets/private-entry.css?v=crt-half-speed-1">
+  <link rel="stylesheet" href="./assets/private-entry.css?v=entry-modal-only-1">
   <link rel="stylesheet" href="./assets/popup.css?v=dossier-file-grid-1">
-  <script defer src="./assets/language.js?v=public-dragon-girl-1"></script>
-  <script defer src="./assets/motion.js?v=resume-curve-1"></script>
+  <script defer src="./assets/language.js?v=dragon-copy-1"></script>
+  <script defer src="./assets/motion.js?v=archive-viewport-1"></script>
   <script defer src="./assets/shell.js?v=crt-half-speed-1"></script>
   <script defer src="./assets/terrain.js?v=dossier-sections-1"></script>
   <script defer src="./assets/sound.js?v=single-preview-1"></script>
   <script defer src="./assets/home.js?v=crt-half-speed-1"></script>
   <script defer src="./assets/private-curvature.js?v=art-view-1"></script>
-  <script defer src="./assets/private-archive.js?v=public-dragon-girl-1"></script>
+  <script defer src="./assets/private-archive.js?v=dragon-copy-1"></script>
   <script defer src="./assets/private-image-view.js?v=dossier-color-window-1"></script>
-  <script defer src="./assets/private-entry.js?v=crt-half-speed-1"></script>
-  <script defer src="./assets/archive.js?v=public-dragon-girl-2"></script>
+  <script defer src="./assets/private-entry.js?v=entry-modal-only-1"></script>
+  <script defer src="./assets/archive.js?v=entry-modal-only-1"></script>
   <script defer src="./assets/keyboard.js?v=polish-preview-1"></script>
 </head>
 <body>
@@ -90,24 +90,6 @@
           <section>
             <h2><button type="button" class="tool-disclosure" data-group="private" aria-controls="dossier-entry" data-file-text aria-haspopup="dialog">[LOCKED] 个人档案</button></h2>
             <div id="private-archive" hidden>
-              <form class="works-lock" aria-labelledby="zoea-works-lock-title" novalidate hidden>
-                <div class="works-lock-title">
-                  <span class="works-lock-symbol" aria-hidden="true"></span>
-                  <h3 id="zoea-works-lock-title" data-works-text data-i18n="worksLocked">档案访问</h3>
-                </div>
-                <label for="zoea-works-password" data-works-text data-i18n="worksPassword">访问密码</label>
-                <div class="works-lock-fields">
-                  <input id="zoea-works-password" type="password" aria-describedby="zoea-works-access-hint zoea-works-access-status" autocomplete="off" maxlength="128" required>
-                  <button type="submit" data-works-text data-i18n="worksUnlock">解锁</button>
-                </div>
-                <p id="zoea-works-access-hint" data-works-text data-i18n="worksAccessHint">当前仅对受邀访客开放加密档案。如需获取访问口令，请通过顶部或「关于」页的社交平台联系作者。</p>
-                <a class="file-source" href="#about" data-file-text data-i18n="contactAuthor">前往关于页 →</a>
-                <div class="access-error" hidden>
-                  <h3 class="file-bar" data-works-text data-i18n="accessNotice">访问提示</h3>
-                  <p id="zoea-works-access-status" role="alert" data-works-text></p>
-                  <button type="button" class="retry-access" data-works-text data-i18n="accessRetry">重新输入</button>
-                </div>
-              </form>
               <div class="works-unlocked" hidden>
                 <div class="dossier-index-top">
                   <button type="button" class="dossier-resume-launch" data-dossier-control aria-haspopup="dialog" aria-controls="dossier-reader">
@@ -332,6 +314,57 @@
       <span class="key-guide" data-file-text data-i18n="keyGuide" hidden>Tab / 方向键 选择 · Enter 打开 · Esc 返回</span>
     </div>
   </main>
+  <dialog id="dossier-entry" class="preview-dialog" aria-labelledby="dossier-entry-title" aria-describedby="zoea-works-access-hint">
+    <div class="preview-glass entry-glass"><div class="entry-sheet dossier-plane" data-popup-surface>
+      <div class="entry-toolbar dossier-scanbar">
+        <span class="entry-signature" lang="en">ZOEA<span>_</span></span>
+        <span class="entry-toolbar-title"></span>
+        <button class="entry-close preview-close" type="button"><span aria-hidden="true"></span></button>
+      </div>
+      <div class="entry-layout">
+        <div class="entry-heading">
+          <span class="entry-path" lang="en">C:\ZOEA\PROJECTS\WORKS&gt;</span>
+          <div class="entry-title-beam"><h2 id="dossier-entry-title" class="dossier-phosphor" tabindex="-1"></h2></div>
+        </div>
+        <div class="entry-landscape" aria-hidden="true">
+          <svg class="entry-tones" width="0" height="0" focusable="false">
+            <defs><filter id="entry-terrain-tone" color-interpolation-filters="sRGB">
+              <feComponentTransfer result="amberTerrain">
+                <feFuncR type="table" tableValues="0 .25 .43 .62 .79 .94 1 1 1"/>
+                <feFuncG type="table" tableValues="0 .105 .21 .33 .46 .59 .72 .85 .99"/>
+                <feFuncB type="table" tableValues="0 .038 .082 .145 .23 .34 .46 .58 .72"/>
+              </feComponentTransfer>
+              <!-- Keep the depth occlusion inside the renderer. Only its lit marks reach the glass. -->
+              <feColorMatrix in="SourceGraphic" type="luminanceToAlpha"/>
+              <feComponentTransfer result="ridgeInk">
+                <feFuncA type="linear" slope="4" intercept="-.035"/>
+              </feComponentTransfer>
+              <feComposite in="amberTerrain" in2="ridgeInk" operator="in"/>
+            </filter></defs>
+          </svg>
+          <canvas></canvas>
+        </div>
+        <div class="entry-form-slot">
+          <form class="works-lock" aria-labelledby="dossier-entry-title" novalidate hidden>
+            <label data-dossier-curve-label for="zoea-works-password" data-works-text data-i18n="worksPassword">访问密码</label>
+            <div class="works-lock-fields">
+              <div class="entry-password-frame" data-dossier-curve-field>
+                <input id="zoea-works-password" type="password" aria-describedby="zoea-works-access-hint zoea-works-access-status" autocomplete="off" maxlength="128" required>
+              </div>
+              <button type="submit" data-works-text data-i18n="worksUnlock">解锁</button>
+            </div>
+            <p id="zoea-works-access-hint" data-works-text data-i18n="worksAccessHint">当前仅对受邀访客开放加密档案。如需获取访问口令，请通过顶部或「关于」页的社交平台联系作者。</p>
+            <a class="file-source" href="#about" data-file-text data-i18n="contactAuthor">前往关于页 →</a>
+            <div class="access-error" hidden>
+              <h3 class="file-bar" data-works-text data-i18n="accessNotice">访问提示</h3>
+              <p id="zoea-works-access-status" role="alert" data-works-text></p>
+              <button type="button" class="retry-access" data-works-text data-i18n="accessRetry">重新输入</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div></div>
+  </dialog>
   <dialog id="dossier-reader" class="preview-dialog dossier-modal" aria-labelledby="dossier-dialog-title">
     <div class="preview-glass">
       <div class="dossier-plane" data-popup-surface>

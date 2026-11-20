@@ -1,58 +1,11 @@
 (() => {
   const root = document.querySelector('#zoea-archive');
-  const home = root.querySelector('#private-archive');
-  const form = home.querySelector('.works-lock');
-  const unlocked = home.querySelector('.works-unlocked');
-  const dialog = document.createElement('dialog');
-  dialog.id = 'dossier-entry';
-  dialog.className = 'preview-dialog';
-  dialog.setAttribute('aria-labelledby', 'dossier-entry-title');
-  dialog.setAttribute('aria-describedby', 'zoea-works-access-hint');
-  dialog.innerHTML = `
-    <div class="preview-glass entry-glass"><div class="entry-sheet dossier-plane" data-popup-surface>
-      <div class="entry-toolbar dossier-scanbar">
-        <span class="entry-signature" lang="en">ZOEA<span>_</span></span>
-        <span class="entry-toolbar-title"></span>
-        <button class="entry-close preview-close" type="button"><span aria-hidden="true"></span></button>
-      </div>
-      <div class="entry-layout">
-        <div class="entry-heading">
-          <span class="entry-path" lang="en">C:\\ZOEA\\PROJECTS\\WORKS&gt;</span>
-          <div class="entry-title-beam"><h2 id="dossier-entry-title" class="dossier-phosphor" tabindex="-1"></h2></div>
-        </div>
-        <div class="entry-landscape" aria-hidden="true">
-          <svg class="entry-tones" width="0" height="0" focusable="false">
-            <defs><filter id="entry-terrain-tone" color-interpolation-filters="sRGB">
-              <feComponentTransfer result="amberTerrain">
-                <feFuncR type="table" tableValues="0 .25 .43 .62 .79 .94 1 1 1"/>
-                <feFuncG type="table" tableValues="0 .105 .21 .33 .46 .59 .72 .85 .99"/>
-                <feFuncB type="table" tableValues="0 .038 .082 .145 .23 .34 .46 .58 .72"/>
-              </feComponentTransfer>
-              <!-- Keep the depth occlusion inside the renderer. Only its lit marks reach the glass. -->
-              <feColorMatrix in="SourceGraphic" type="luminanceToAlpha"/>
-              <feComponentTransfer result="ridgeInk">
-                <feFuncA type="linear" slope="4" intercept="-.035"/>
-              </feComponentTransfer>
-              <feComposite in="amberTerrain" in2="ridgeInk" operator="in"/>
-            </filter></defs>
-          </svg>
-          <canvas></canvas>
-        </div>
-        <div class="entry-form-slot"></div>
-      </div>
-    </div></div>`;
-  root.append(dialog);
-
+  const dialog = root.querySelector('#dossier-entry');
   const title = dialog.querySelector('h2');
   const toolbarTitle = dialog.querySelector('.entry-toolbar-title');
   const close = dialog.querySelector('.entry-close');
-  const slot = dialog.querySelector('.entry-form-slot');
   const canvas = dialog.querySelector('.entry-landscape canvas');
-  const password = form.querySelector('input[type="password"]');
-  const passwordLabel = form.querySelector('label[for]');
-  const field = document.createElement('div');
-  field.className = 'entry-password-frame';
-  field.setAttribute('data-dossier-curve-field', '');
+  const password = dialog.querySelector('input[type="password"]');
   window.bindDossierCurve(dialog);
 
   function translate() {
@@ -294,11 +247,6 @@
       requestDraw();
     }
   });
-  function restoreForm() {
-    delete passwordLabel.dataset.dossierCurveLabel;
-    if (field.contains(password)) field.replaceWith(password);
-    if (slot.contains(form)) home.insertBefore(form, unlocked);
-  }
   function dismiss() {
     root.dispatchEvent(new CustomEvent('dossier-entry-dismiss'));
   }
@@ -315,10 +263,7 @@
     }
   }, true);
   dialog.addEventListener('close', () => {
-    if (!dialog.open) {
-      stopTerrain();
-      restoreForm();
-    }
+    if (!dialog.open) stopTerrain();
   });
   dialog.addEventListener('click', event => {
     if (event.target === dialog) dismiss();
@@ -327,12 +272,6 @@
     show() {
       if (dialog.open) return;
       translate();
-      slot.append(form);
-      passwordLabel.dataset.dossierCurveLabel = '';
-      if (!field.contains(password)) {
-        password.before(field);
-        field.append(password);
-      }
       dialog.showModal();
       dialog.scrollTop = 0;
       if (matchMedia('(min-width: 730px) and (pointer: fine)').matches) {
@@ -345,7 +284,6 @@
     hide() {
       stopTerrain();
       if (dialog.open) dialog.close();
-      restoreForm();
     },
   };
 })();

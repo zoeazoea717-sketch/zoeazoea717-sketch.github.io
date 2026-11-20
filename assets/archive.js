@@ -1,10 +1,10 @@
 (() => {
   const root = document.getElementById('zoea-archive');
   const geometry = window.crtGeometry;
-  window.createCrt(root);
   const find = selector => root.querySelector(selector);
   const canvas = find('.crt-signal');
   const display = find('.display');
+  window.createCrt(root,{pointerSurface:display});
   const ctx = canvas.getContext('2d');
   const list = find('.list');
   const heading = find('#zoea-heading');
@@ -13,7 +13,6 @@
   const worksLock = find('.works-lock');
   const worksReady = find('.works-unlocked');
   const worksPassword = find('#zoea-works-password');
-  const worksSubmit = worksLock.querySelector('button');
   const worksStatus = find('#zoea-works-access-status');
   const errorWindow = find('.access-error');
   const retryButton = find('.retry-access');
@@ -37,7 +36,7 @@
   const qqGlass = qqDialog.querySelector('.qq-glass');
   const qqCode = qqDialog.querySelector('.qq-code');
   const qqSource = qqCode.querySelector('.crt-signal');
-  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .preview-thumb, .works-lock input, .works-lock button, [data-dossier-control]';
+  const controlSelector = 'header a, header button, .list button, .about-contact, .tool-disclosure, .file-source, .file-tile, .file-action, .preview-thumb, [data-dossier-control]';
   let controls = [];
   const soundButton = find('.crt-mute');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
@@ -73,6 +72,8 @@
   const graphemes = new Intl.Segmenter();
   let refreshLabels;
   let labelLayout;
+  // Cache document geometry once per layout. Scrolling moves this sheet behind fixed CRT glass.
+  let offsetY = 0, bleed = 0;
   const coverAnimations = new Map();
 
   function paintCardImage({image,imageBox}, lit=false) {
@@ -114,8 +115,8 @@
       if (root.hidden || document.hidden || root.querySelector('dialog[open]')) return;
       const card = labelLayout?.cardLayouts.find(item=>item.image===image);
       if (!card || !animation.strip.naturalWidth) return;
-      const top = display.getBoundingClientRect().top + card.imageBox.top;
-      if (top >= innerHeight || top+card.imageBox.height <= 0) return;
+      const top = offsetY + card.imageBox.top;
+      if (top >= display.clientHeight+bleed || top+card.imageBox.height <= -bleed) return;
       if (reduced.matches) animation.frame = 0;
       paintCardImage(card,card.open.matches(':hover,:focus-visible'));
       root.crtLive.invalidate();
@@ -125,7 +126,6 @@
       },durations[animation.frame]);
     }
     animation.update = update;
-    window.addEventListener('scroll',update,{passive:true});
     animation.strip.onload = update;
     animation.strip.src = image.dataset.strip;
     document.addEventListener('visibilitychange',update);
@@ -134,17 +134,24 @@
   }
 
   function updateHitAreas(w,h) {
-    const screen = display.getBoundingClientRect();
     const aspect = w/h;
-    const areas = controls.filter(control=>!control.closest('dialog') && control.getClientRects().length).map(control=>{
-      const box = control.getBoundingClientRect();
-      const left = box.left-screen.left, top = box.top-screen.top;
+    const areas = [];
+    for (const [control,box] of labelLayout.focusBoxes) {
+      // In the 2D fallback only these controls have their labels drawn onto the glass.
+      if (!root.crtLive && !control.matches('header .wordmark, header nav button, .list button')) continue;
+      const left = box.left, top = box.top+offsetY;
+      const hit = control.querySelector('.dossier-surface-hit');
+      if (!box.width || !box.height || top>h+bleed || top+box.height < -bleed) {
+        control.style.transform = '';
+        if (hit) hit.style.display = 'none';
+        continue;
+      }
+      if (hit) hit.style.removeProperty('display');
       function source(x,y) {
           const nx = 2*x/w-1, ny = 2*y/h-1;
           return [nx,ny,nx*.5*aspect,ny*.5];
       }
       const corners = [source(left,top),source(left+box.width,top),source(left,top+box.height),source(left+box.width,top+box.height)];
-      const hit = control.querySelector('.dossier-surface-hit');
       const outline = [];
       if (hit) {
         // Full-width rows and the artwork can bow well beyond their four corner points.
@@ -155,12 +162,12 @@
         for (let i=down;i>0;i--) outline.push(source(left,top+box.height*i/down));
       }
       control.style.transformOrigin = '0 0';
-      return {control,left,top,width:box.width,height:box.height,corners,hit,outline};
-    });
+      areas.push({control,left,top,width:box.width,height:box.height,corners,hit,outline});
+    }
 
     const thumbnails = areas.filter(({control})=>control.matches('.preview-thumb'));
     let previousFront;
-    root.crtLive.setPanelMediaUpdater(thumbnails.length ? (solid,clear)=>{
+    root.crtLive?.setPanelMediaUpdater(thumbnails.length ? (solid,clear)=>{
       if (clear===previousFront) return;
       previousFront = clear;
       for (const {control,left,width} of thumbnails) {
@@ -177,7 +184,7 @@
     } : null);
 
     let lastX, lastY, lastBend;
-    root.crtLive.setHitAreaUpdater((x,y,bend)=>{
+    function projectAreas(x,y,bend) {
       if (bend===lastBend && Math.abs(x-lastX)<.0003 && Math.abs(y-lastY)<.0003) return;
       lastX = x;
       lastY = y;
@@ -220,7 +227,9 @@
           0,0,1,0,a.x,a.y,0,1
         ].join(',')})`;
       }
-    });
+    }
+    if (root.crtLive) root.crtLive.setHitAreaUpdater(projectAreas);
+    else projectAreas(0,0,geometry.bend);
   }
   const tone = Array.from({length:1024},(_,index)=>{
     const light = index/1023;
@@ -252,7 +261,7 @@
   }
 
   function measureLabels() {
-    const screen = display.getBoundingClientRect();
+    const screen = root.getBoundingClientRect();
     const range = document.createRange();
     const layout = [];
     for (const label of root.querySelectorAll('.wordmark, nav button, .prompt, .about-content :is(h2,p), .list button, [data-file-text], [data-works-text]')) {
@@ -301,7 +310,7 @@
       }));
     const shelf = find('#dossier-student-projects');
     const bay = find('.dossier-bay');
-    return {layout,cardLayouts,shelfBox:shelf.getClientRects().length ? measureBox(shelf) : null, bay:bay.getClientRects().length ? measureBox(bay) : null,
+    return {layout,cardLayouts,panel:measureBox(panel),heading:measureBox(heading),shelfBox:shelf.getClientRects().length ? measureBox(shelf) : null, bay:bay.getClientRects().length ? measureBox(bay) : null,
       engravings:[...worksDirectory.querySelectorAll('.dossier-metal')].filter(mark=>mark.getClientRects().length)
         .map(mark=>({box:measureBox(mark), horizontal:mark.classList.contains('cassette-grip')})),
       dossierBars:[...worksReady.querySelectorAll('.dossier-resume-launch,.dossier-lock,.dossier-group-toggle')]
@@ -315,7 +324,7 @@
         .map(icon=>({icon,tile:icon.closest('.file-tile'),...measureIcon(icon)})),
       tiles:fileTiles.filter(tile=>tile.getClientRects().length).map(tile=>({tile,...measureBox(tile)})),
       focusBoxes:new Map(controls.filter(control=>control.getClientRects().length).map(control=>[control,measureBox(control)])),
-      staticWindows:[...root.querySelectorAll('.public-works-bar,.access-error h3')]
+      staticWindows:[...root.querySelectorAll('.public-works-bar')]
         .filter(bar=>!bar.closest('dialog') && bar.getClientRects().length)
         .map(bar=>({box:measureBox(bar.parentElement),bar:measureBox(bar)})),
       groups:disclosures.filter(button=>button.getClientRects().length).map(button=>({
@@ -326,21 +335,22 @@
         footer:measureBox(file.querySelector('.file-actions')),
         divider:divider ? measureBox(divider) : null
       } : null,
-      actions:file ? [...file.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : [],
-      lock:worksLock.hidden || worksLock.closest('dialog') ? null : {
-        box:measureBox(worksLock),input:measureBox(worksPassword),button:measureBox(worksSubmit),
-        symbol:measureBox(worksLock.querySelector('.works-lock-symbol'))
-      }
+      actions:file ? [...file.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : []
     };
   }
 
   function drawLabels(width,height) {
-    labelsLayer.width = width;
-    labelsLayer.height = height;
-    // Draw the full surface in layout coordinates. The CRT applies curvature and perspective once.
+    if (labelsLayer.width!==width || labelsLayer.height!==height) {
+      labelsLayer.width = width;
+      labelsLayer.height = height;
+    }
+    labelsCtx.resetTransform();
+    labelsCtx.clearRect(0,0,width,height);
+    labelsCtx.globalAlpha = 1;
     const scaleX = width/display.clientWidth;
-    labelsCtx.setTransform(scaleX,0,0,height/display.clientHeight,0,0);
-    const {layout,cardLayouts,dossierBars,bay,engravings,soundIcon,contactIcons,tiles,groups,properties,files,actions,lock,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
+    const scaleY = height/(display.clientHeight+2*bleed);
+    labelsCtx.setTransform(scaleX,0,0,scaleY,0,(offsetY+bleed)*scaleY);
+    const {layout,cardLayouts,dossierBars,bay,engravings,soundIcon,contactIcons,tiles,groups,properties,files,actions,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -380,6 +390,7 @@
         labelsCtx.fillRect(bay.left+3,bay.top+bay.height-2,bay.width-6,1);
       }
       for (const {box,imageBox,image,open,corners} of cardLayouts) {
+        if (box.top+offsetY>display.clientHeight+bleed || box.top+box.height+offsetY < -bleed) continue;
         const lit = highlighted(open);
         labelsCtx.globalAlpha = 1;
         paintCardImage({image,imageBox});
@@ -414,19 +425,6 @@
       }
       for (const {tile,...box} of tiles) {
         if (highlighted(tile)) outline(box,.36);
-      }
-      if (lock) {
-        outline(lock.box,.35);
-        outline(lock.input,highlighted(worksPassword) || worksError ? .80 : .46);
-        outline(lock.button,highlighted(worksSubmit) ? .86 : .54);
-        const {left,top,width:w,height:h} = lock.symbol;
-        labelsCtx.globalAlpha = .90;
-        labelsCtx.beginPath();
-        labelsCtx.ellipse(left+w*.5,top+h*.42,w*.22,h*.32,0,Math.PI,2*Math.PI);
-        labelsCtx.stroke();
-        labelsCtx.strokeRect(left+w*.16,top+h*.42,w*.68,h*.46);
-        labelsCtx.fillStyle = textPhosphor;
-        labelsCtx.fillRect(left+w*.46,top+h*.57,w*.08,h*.15);
       }
       if (properties) {
         const {box,bar,footer,divider} = properties;
@@ -844,8 +842,8 @@
   }
 
   function drawHeading(width,height,scale) {
-    const box = heading.getBoundingClientRect();
-    const screen = display.getBoundingClientRect();
+    const box = labelLayout.heading;
+    if (box.top+box.height+offsetY < -bleed || box.top+offsetY>display.clientHeight+bleed) return;
     const style = getComputedStyle(heading);
     titleLayer.width = Math.ceil(box.width*scale)+4;
     titleLayer.height = Math.ceil(box.height*scale)+4;
@@ -854,36 +852,48 @@
     titleCtx.fillStyle = '#fff';
     titleCtx.fillText(heading.textContent,0,box.height*scale/2);
     const text = titleCtx.getImageData(0,0,titleLayer.width,titleLayer.height).data;
-    const x = (box.left-screen.left)*width/display.clientWidth;
-    const y = (box.top-screen.top)*height/display.clientHeight;
+    const x = box.left*width/display.clientWidth;
+    const y = (box.top+offsetY+bleed)*height/(display.clientHeight+2*bleed);
     const pitch = Math.max(2,2.05*scale);
     drawPhosphorDots(sourceCtx,text,titleLayer.width,titleLayer.height,pitch,x,y);
   }
 
   function render() {
-    const w = display.clientWidth;
-    const h = display.clientHeight;
-    if (w<2 || h<2) return;
+    if (!display.clientWidth || !display.clientHeight) return;
     controls = [...root.querySelectorAll(controlSelector)].filter(control=>!control.closest('dialog'));
+    for (const control of controls) control.style.transform = '';
+    titleStamps.clear();
+    labelLayout = measureLabels();
+    paintViewport();
+  }
+
+  function viewportBounds(box) {
+    if (!box) return null;
+    const w = display.clientWidth, h = display.clientHeight;
+    return [box.left/w,(box.top+offsetY)/h,(box.left+box.width)/w,(box.top+offsetY+box.height)/h];
+  }
+
+  function paintViewport() {
+    const w = display.clientWidth, h = display.clientHeight;
+    if (w<2 || h<2 || !labelLayout) return;
     const screen = display.getBoundingClientRect();
-    const box = panel.getBoundingClientRect();
+    offsetY = root.getBoundingClientRect().top-screen.top;
+    // Curvature and tilt can bring content outside the flat viewport onto the visible glass.
+    bleed = Math.ceil(.1*h+.04*w);
+    updateHitAreas(w,h);
     if (root.crtLive) {
-      for (const control of controls) control.style.transform = '';
-      titleStamps.clear();
-      labelLayout = measureLabels();
+      const captureHeight = h+2*bleed;
+      root.crtLive.setSignalY(h/captureHeight,bleed/captureHeight);
       root.crtLive.setArtworkBounds([0,0,0,0]);
-      updateHitAreas(w,h);
-      root.crtLive.setPanel([
-        (box.left-screen.left)/w,(box.top-screen.top)/h,
-        (box.right-screen.left)/w,(box.bottom-screen.top)/h
-      ]);
-      const scale = Math.min(Math.max(1,devicePixelRatio || 1),2.5,Math.sqrt(7500000/(w*h)));
-      const width = Math.round(w*scale), height = Math.round(h*scale);
+      root.crtLive.setPanel(viewportBounds(labelLayout.panel));
+      const scale = Math.min(Math.max(1,devicePixelRatio || 1),2.5,Math.sqrt(7500000/(w*captureHeight)));
+      const width = Math.round(w*scale), height = Math.round(captureHeight*scale);
       refreshLabels = ()=>drawLabels(width,height);
       refreshLabels();
       root.crtLive.setScene(()=>drawSignal(width,height,scale,true),false);
       // Embedded sheets may decode and enter the viewport before the first layout.
       for (const animation of coverAnimations.values()) animation.update();
+      root.crtLive.present(performance.now());
       root.classList.add('crt-ready');
     } else {
       renderFallback(w,h);
@@ -893,11 +903,23 @@
   function renderFallback(w,h) {
     const bend = geometry.bend;
     const scale = Math.min(Math.max(devicePixelRatio || 1,1.25),1.6,1400/w,1050/h);
-    const width = canvas.width = Math.round(w*scale);
-    const height = canvas.height = Math.round(h*scale);
-    drawLabels(width,height);
-    const [source,diffuse,halo] = drawSignal(width,height,scale)
-      .map(layer=>layer.getContext('2d').getImageData(0,0,width,height).data);
+    const width = Math.round(w*scale), height = Math.round(h*scale);
+    if (canvas.width!==width || canvas.height!==height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    const first = -offsetY-bleed, last = h-offsetY+bleed;
+    const title = labelLayout.heading;
+    if ((title.top>last || title.top+title.height<first) && !labelLayout.layout.some(
+      label=>label.bottom>=first && label.lines[0]?.middle-parseFloat(label.fontSize)<=last
+    )) {
+      ctx.clearRect(0,0,width,height);
+      return;
+    }
+    const padding = Math.round(bleed*scale), captureHeight = height+2*padding;
+    drawLabels(width,captureHeight);
+    const [source,diffuse,halo] = drawSignal(width,captureHeight,scale)
+      .map(layer=>layer.getContext('2d').getImageData(0,0,width,captureHeight).data);
     const pixels = ctx.createImageData(width,height);
     const pitch = Math.max(2.2,height/180);
     for (let y=0;y<height;y++) {
@@ -908,7 +930,7 @@
         const u = (geometry.blend(dx,dx*(1+.044*dy*dy+.022*dx*dx)*.96,bend)+1)*width/2-.5;
         const v = (geometry.blend(dy,dy*(1+.061*dx*dx+.018*dy*dy)*.96,bend)+1)*height/2-.5;
         const sx = Math.max(0,Math.min(width-1.001,u));
-        const sy = Math.max(0,Math.min(height-1.001,v));
+        const sy = Math.max(0,Math.min(captureHeight-1.001,v+padding));
         const col = Math.floor(sx), row = Math.floor(sy);
         const fx = sx-col, fy = sy-row, stride = width*4;
         const p = (row*width+col)*4+3;
@@ -916,6 +938,7 @@
         const bottom = source[p+stride]*(1-fx)+source[p+stride+4]*fx;
         const sharp = (top*(1-fy)+bottom*fy)/255;
         const bloom = diffuse[p]/255;
+        if (!sharp && !bloom && !halo[p]) continue;
         const edge = .08+.24*limit((radius-.25)/1.4);
         const emission = sharp*(1-edge)+bloom*edge;
         const phase = v/pitch-Math.round(v/pitch);
@@ -966,7 +989,7 @@
     toolDirectory.hidden = about || Boolean(file) || categoryId!=='tools';
     for (const button of disclosures) {
       if (button===privateToggle) {
-        privateBody.hidden = !privateExpanded;
+        privateBody.hidden = worksReady.hidden;
         if (worksUnlocked) {
           button.removeAttribute('aria-haspopup');
           button.setAttribute('aria-controls','private-archive');
@@ -1005,14 +1028,12 @@
   function showAccessError(key,description) {
     worksError = [key,description];
     updateWorksStatus();
-    render();
     retryButton.focus();
     document.dispatchEvent(new CustomEvent('zoea-access-result',{detail:{ok:false}}));
   }
   function retryAccess() {
     worksError = null;
     updateWorksStatus();
-    render();
     worksPassword.focus();
     worksPassword.select();
   }
@@ -1027,7 +1048,6 @@
     if (!worksError) return;
     worksError = null;
     updateWorksStatus();
-    render();
   });
   worksLock.addEventListener('submit',async event=>{
     event.preventDefault();
@@ -1347,9 +1367,7 @@
       if (worksReady.hidden || root.hidden || !worksReady.getClientRects().length) return;
       render();
       if (reveal && root.crtLive && labelLayout?.shelfBox) {
-        const {left,top,width,height} = labelLayout.shelfBox;
-        const w = display.clientWidth, h = display.clientHeight;
-        root.crtLive.refreshPanel([left/w,top/h,(left+width)/w,(top+height)/h]);
+        root.crtLive.refreshPanel(()=>viewportBounds(labelLayout.shelfBox));
       }
     });
   });
@@ -1376,7 +1394,11 @@
   for (const img of contactImages) img.addEventListener('load',updateLabelHighlight);
   geometry.fullscreen.addEventListener('change',render);
   document.addEventListener('fullscreenchange',render);
-  new ResizeObserver(()=>render()).observe(display);
+  const layoutObserver = new ResizeObserver(render);
+  layoutObserver.observe(display);
+  layoutObserver.observe(root.querySelector('.intro'));
+  // Document scroll events are coalesced by the browser before paint.
+  window.addEventListener('scroll',paintViewport,{passive:true});
   if (!root.crtLive) geometry.compactTouch.addEventListener('change',render);
 
 })();
