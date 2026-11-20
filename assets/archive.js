@@ -108,12 +108,14 @@
     const durations = image.dataset.frameMs.split(',').map(Number);
     const animation = {strip:new Image(),durations,frame:0};
     coverAnimations.set(image,animation);
-    let timer, visible = false;
+    let timer;
     function update() {
       clearTimeout(timer);
-      if (!visible || document.hidden || root.querySelector('dialog[open]')) return;
+      if (root.hidden || document.hidden || root.querySelector('dialog[open]')) return;
       const card = labelLayout?.cardLayouts.find(item=>item.image===image);
       if (!card || !animation.strip.naturalWidth) return;
+      const top = display.getBoundingClientRect().top + card.imageBox.top;
+      if (top >= innerHeight || top+card.imageBox.height <= 0) return;
       if (reduced.matches) animation.frame = 0;
       paintCardImage(card,card.open.matches(':hover,:focus-visible'));
       root.crtLive.invalidate();
@@ -122,11 +124,8 @@
         update();
       },durations[animation.frame]);
     }
-    const visibility = new IntersectionObserver(([entry])=>{
-      visible = entry.isIntersecting;
-      update();
-    });
-    visibility.observe(image.closest('.dossier-card'));
+    animation.update = update;
+    window.addEventListener('scroll',update,{passive:true});
     animation.strip.onload = update;
     animation.strip.src = image.dataset.strip;
     document.addEventListener('visibilitychange',update);
@@ -883,6 +882,8 @@
       refreshLabels = ()=>drawLabels(width,height);
       refreshLabels();
       root.crtLive.setScene(()=>drawSignal(width,height,scale,true),false);
+      // Embedded sheets may decode and enter the viewport before the first layout.
+      for (const animation of coverAnimations.values()) animation.update();
       root.classList.add('crt-ready');
     } else {
       renderFallback(w,h);
