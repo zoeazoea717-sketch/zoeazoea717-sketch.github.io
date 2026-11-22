@@ -3,15 +3,17 @@ window.crtGeometry = (() => {
     '(hover: none) and (pointer: coarse) and (max-width: 600px)',
     '(hover: none) and (pointer: coarse) and (max-height: 600px)'
   ].join(', '));
+  const narrowPortrait = matchMedia('(max-width: 640px) and (orientation: portrait)');
   const blend = (flat,curved,bend) => bend===1 ? curved : flat+(curved-flat)*bend;
   const durationScale = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--crt-duration-scale')) || 1;
   return {
     compactTouch,
+    narrowPortrait,
     durationScale,
     panelWriteMs: 270 * durationScale,
     fullscreen:matchMedia('(display-mode: fullscreen)'),
-    get bend() { return compactTouch.matches ? .28 : 1; },
-    get tilt() { return compactTouch.matches ? .35 : 1; },
+    get bend() { return compactTouch.matches ? .28 : narrowPortrait.matches ? .55 : 1; },
+    get tilt() { return compactTouch.matches ? .35 : narrowPortrait.matches ? .55 : 1; },
     blend,
     glassX: (x,y,bend) => blend(.5*x,.48*x*(1+.044*y*y+.022*x*x),bend),
     glassY: (x,y,bend) => blend(.5*y,.48*y*(1+.061*x*x+.018*y*y),bend)
@@ -24,12 +26,22 @@ window.crtIconMask = (() => {
   return image => {
     if (masks.has(image)) return masks.get(image);
     const mask = document.createElement('canvas');
-    mask.width = mask.height = 72;
+    const nw = image.naturalWidth || 72;
+    const nh = image.naturalHeight || 72;
+    const maxDim = 96;
+    if (nw >= nh) {
+      mask.width = maxDim;
+      mask.height = Math.max(1, Math.round(maxDim * nh / nw));
+    } else {
+      mask.height = maxDim;
+      mask.width = Math.max(1, Math.round(maxDim * nw / nh));
+    }
     const ctx = mask.getContext('2d');
-    ctx.drawImage(image,0,0,72,72);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image,0,0,mask.width,mask.height);
     ctx.globalCompositeOperation = 'source-in';
     ctx.fillStyle = '#fff';
-    ctx.fillRect(0,0,72,72);
+    ctx.fillRect(0,0,mask.width,mask.height);
     masks.set(image,mask);
     return mask;
   };
@@ -46,10 +58,10 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
   const fragment = '#version 300 es\n' + [
     'precision highp float;',
     'out vec4 color;',
-    'uniform vec2 size, viewport, pointer, signalY;',
+    'uniform vec2 size, viewport, pointer, signalX, signalY;',
     'uniform vec4 panel, writeBounds, entryCaret, artwork;',
     'uniform vec3 writeEdge;',
-    'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime, bend;',
+    'uniform float elapsed, panelRefresh, power, pointerPresence, entryTime, returnTime, bend;',
     'uniform bool home, closeup;',
     'uniform sampler2D signalTex;',
     'float bell(float x){return exp(-x*x);}',
@@ -86,8 +98,13 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '  vec3 hit=ray*(distance*normal.z/dot(normal,ray))-vec3(0.,0.,distance);',
     '  return .5+vec2(dot(hit,right)/aspect,dot(hit,down));',
     '}',
+    'float softKnee(float x){',
+    '  float c=max(0.,x);',
+    '  return c<=.76 ? c : .76+.24*tanh((c-.76)/.38);',
+    '}',
     'vec4 phosphor(float value, float terrain){',
-    '  vec3 amber=min(vec3(1.),vec3(328.,269.,209.)*pow(vec3(clamp(value,0.,1.)),vec3(.79,1.05,1.51))/255.);',
+    '  float k=softKnee(value);',
+    '  vec3 amber=min(vec3(1.),vec3(328.,269.,209.)*pow(vec3(clamp(k,0.,1.)),vec3(.79,1.05,1.51))/255.);',
     '  float opacity=max(terrain,amber.r);',
     // Output premultiplied color for the browser compositor. Preserve the fade below the old normalization floor.
     '  return vec4(amber*min(1.,opacity/.001),opacity);',
@@ -109,11 +126,36 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '  }',
     '  return glow;',
     '}',
+    'float returnAfterglow(vec2 point){',
+    '  vec2 center=point*viewport*.5;',
+    '  float glow=0.;',
+    '  if(!home){',
+    '    float lineAge=clamp((returnTime-112.)/34.,0.,1.);',
+    '    float halfWidth=mix(.88,4./viewport.x,smoothstep(0.,1.,lineAge));',
+    '    float lineMask=1.-smoothstep(halfWidth*.84,halfWidth,abs(point.x));',
+    '    float line=(.78*bell(center.y/1.05)+.24*bell(center.y/4.4))*lineMask;',
+    '    glow+=line*smoothstep(104.,122.,returnTime)*(1.-smoothstep(140.,152.,returnTime));',
+    '    float dotIn=smoothstep(134.,148.,returnTime);',
+    '    float dotSize=mix(2.6,2.1,smoothstep(134.,152.,returnTime));',
+    '    glow+=(.92*bell(length(center)/dotSize)+.20*bell(length(center)/8.))*dotIn;',
+    '  } else {',
+    '    float t=max(0.,returnTime-152.);',
+    '    float dotDecay=exp(-t/22.)*(1.-smoothstep(38.,62.,t));',
+    '    glow+=(.92*bell(length(center)/2.1)+.20*bell(length(center)/8.))*dotDecay;',
+    '    float lineGrow=1.-pow(1.-clamp(t/44.,0.,1.),3.);',
+    '    float halfWidth=mix(4./viewport.x,1.04,lineGrow);',
+    '    float lineMask=1.-smoothstep(halfWidth*.86,halfWidth,abs(point.x));',
+    '    float lineFade=smoothstep(0.,10.,t)*(1.-smoothstep(30.,76.,t));',
+    '    glow+=(.72*bell(center.y/1.15)+.22*bell(center.y/4.8))*lineMask*lineFade;',
+    '  }',
+    '  return glow;',
+    '}',
     'void main(){',
     '  vec2 uv=vec2(gl_FragCoord.x/size.x,1.-gl_FragCoord.y/size.y);',
     '  vec2 n=uv*2.-1.;',
     '  vec2 screenN=n;',
     '  bool entering=entryTime>=0.;',
+    '  bool returning=returnTime>=0.;',
     '  float squeeze=1.-power;',
     '  float wide=1.-.91*pow(squeeze,3.);',
     '  float tall=max(.018,pow(power,1.75));',
@@ -121,6 +163,8 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '  projected.y*=1.+squeeze*(.36+.42*bend*abs(projected.x));',
     '  projected.x*=1.+squeeze*.22*bend*min(1.,abs(projected.y));',
     '  float rasterMask=1.;',
+    '  float returnCurtain=1.;',
+    '  float returnBeam=0.;',
     '  if(entering && home){',
     '    float collapse=smoothstep(45.,155.,entryTime);',
     '    float width=1.-.16*smoothstep(100.,155.,entryTime);',
@@ -131,6 +175,31 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '    rasterMask=(1.-smoothstep(.97,1.01,max(abs(projected.x),abs(projected.y))))',
     '      *(1.-smoothstep(136.,155.,entryTime));',
     '    if(rasterMask<=0.){color=phosphor(entryAfterglow(screenN),0.);return;}',
+    '    projected=clamp(projected,-1.01,1.01);',
+    '  } else if(returning && !home){',
+    '    float c=smoothstep(0.,128.,returnTime);',
+    '    float collapse=c*c*(3.-2.*c);',
+    '    float width=1.-.14*smoothstep(82.,132.,returnTime);',
+    '    projected.x=n.x/width;',
+    '    float bow=1.+.24*bend*collapse*projected.x*projected.x;',
+    '    projected.y=n.y*bow/max(2./viewport.y,1.-collapse);',
+    '    projected.x*=1.+.05*bend*collapse*min(1.,abs(projected.y));',
+    '    rasterMask=(1.-smoothstep(.97,1.01,max(abs(projected.x),abs(projected.y))))',
+    '      *(1.-smoothstep(118.,136.,returnTime));',
+    '    if(rasterMask<=0.){color=phosphor(returnAfterglow(screenN),0.);return;}',
+    '    projected=clamp(projected,-1.01,1.01);',
+    '  } else if(returning && home){',
+    '    float t=max(0.,returnTime-152.);',
+    '    float u=clamp((t-20.)/192.,0.,1.);',
+    '    float openY=(1.-pow(1.-u,3.2))*1.045;',
+    '    float settleProgress=min(1.,openY);',
+    '    float settle=1.+.055*(1.-settleProgress);',
+    '    projected=n*vec2(1.,settle*(1.+.05*bend*(1.-settleProgress)*n.x*n.x));',
+    '    float edgeSoft=mix(.032,.010,settleProgress);',
+    '    returnCurtain=u<=0. ? 0. : (1.-smoothstep(openY-edgeSoft,openY+.005,abs(screenN.y)));',
+    '    returnBeam=bell((abs(screenN.y)-openY)/(.010+.018*(1.-settleProgress)))',
+    '      *smoothstep(0.,.07,openY)*(1.-smoothstep(.88,1.04,openY))*.34;',
+    '    if(returnCurtain<=.001 && returnBeam<=.001){color=phosphor(returnAfterglow(screenN),0.);return;}',
     '    projected=clamp(projected,-1.01,1.01);',
     '  } else if(any(greaterThan(abs(projected),vec2(1.)))){color=vec4(0.);return;}',
     '  n=projected;',
@@ -143,7 +212,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '  vec2 q=glassUV;',
     '  float depth=smoothstep(.56,1.,q.y);',
     '  if(home) q.x-=pointer.x*.003*depth;',
-    '  vec2 sampleUV=vec2(q.x,q.y*signalY.x+signalY.y);',
+    '  vec2 sampleUV=vec2(q.x*signalX.x+signalX.y,q.y*signalY.x+signalY.y);',
     // The artwork uses the same projected texture coordinates and reveal as its amber frame.
     '  if(artwork.z>artwork.x && all(greaterThanEqual(q,artwork.xy)) && all(lessThan(q,artwork.zw))){',
     '    bool writing=entering || (panelRefresh<1. && all(greaterThanEqual(q,writeBounds.xy)) && all(lessThanEqual(q,writeBounds.zw)));',
@@ -152,9 +221,15 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '    color=vec4(texture(signalTex,sampleUV).rgb*scanline,1.)*visibility;',
     '    return;',
     '  }',
-    '  float sharp=texture(signalTex,sampleUV).r;',
-    '  float diffuse=textureLod(signalTex,sampleUV,home ? 2.8 : 1.75).r;',
-    '  float halo=textureLod(signalTex,sampleUV,home ? 4.65 : 3.3).r;',
+    '  vec2 texel=1./max(vec2(1.),viewport);',
+    '  vec2 edgeFade=smoothstep(vec2(0.),texel*1.5,sampleUV)*smoothstep(vec2(0.),texel*1.5,1.-sampleUV);',
+    '  float inFrame=edgeFade.x*edgeFade.y;',
+    '  vec2 outDist=max(vec2(0.),abs(sampleUV-.5)-.5);',
+    '  float glowBounds=exp(-dot(outDist,outDist)*18000.);',
+    '  vec2 clampedUV=clamp(sampleUV,vec2(0.),vec2(1.));',
+    '  float sharp=texture(signalTex,clampedUV).r*inFrame;',
+    '  float diffuse=textureLod(signalTex,clampedUV,home ? 2.8 : 1.75).r*glowBounds;',
+    '  float halo=textureLod(signalTex,clampedUV,home ? 4.65 : 3.3).r*glowBounds;',
     '  float edge=(home ? .09 : .08)+.24*clamp((radius-.25)/1.4,0.,1.);',
     '  float emission=mix(sharp,diffuse,edge);',
     '  float lines=home ? min(232.,viewport.y/2.15) : min(180.,viewport.y/2.2);',
@@ -169,13 +244,14 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '  vec2 cursor=(uv-.5-pointer*.5)*vec2(5.0,6.2);',
     '  float response=home || closeup ? 0. : pointerPresence*exp(-dot(cursor,cursor));',
     '  float beam=.36+.64*bell(phase/(.20+.20*sqrt(emission)+.15*leading*packet*pulseArea));',
+    '  float aperture=closeup ? 1. : (.965+.035*cos(6.2831853*glassUV.x*viewport.x/2.65));',
     '  float logoGlow=home ? bell((q.y-.32)/.18) : 0.;',
-    '  float spread=diffuse*(.46+.52*logoGlow)+halo*(.34+.34*logoGlow);',
+    '  float spread=diffuse*(.44+.38*logoGlow)+halo*(.31+.25*logoGlow);',
     '  if(closeup) spread*=.58;',
-    '  float vignette=max(.56,1.-.075*radius-.061*radius*radius);',
-    '  float value=(emission*beam*(1.+scan*.62+response*.85)',
-    '    +spread*(1.+scan*1.40+response*1.85))*vignette;',
-    '  value+=halo*leading*packet*pulseArea*.23*vignette;',
+    '  float vignette=max(.52,1.-.072*radius-.066*radius*radius);',
+    '  float value=(emission*beam*aperture*(1.+scan*.56+response*.82)',
+    '    +spread*(1.+scan*1.22+response*1.75))*vignette;',
+    '  value+=halo*leading*packet*pulseArea*.20*vignette;',
     '  float structure=0.;',
     '  if(!home && all(greaterThan(panel.zw,panel.xy))',
     '    && all(greaterThanEqual(q,panel.xy)) && all(lessThanEqual(q,panel.zw))){',
@@ -201,7 +277,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '    if(!entering && panelRefresh<1. && all(greaterThanEqual(q,writeBounds.xy)) && all(lessThanEqual(q,writeBounds.zw))) value=value*gate*writeGain+trace;',
     '    structure=panelStructure*(.90+.10*bell(phase/.30));',
     '  }',
-    '  value=clamp((value+structure)*(1.+squeeze*.85),0.,1.);',
+    '  value=clamp((value+structure)*(1.+squeeze*.85),0.,1.45);',
     '  float gunTail=smoothstep(.52,.96,squeeze)*bell(projected.y/.20)*bell(projected.x/.86);',
     '  value=max(value,gunTail*.78);',
     '  if(entering){',
@@ -222,7 +298,15 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     '    }',
     '    value+=entryAfterglow(screenN);',
     '  }',
-    '  float terrain=home ? smoothstep(.62,.79,q.y)*.94*power*rasterMask : 0.;',
+    '  if(returning){',
+    '    if(!home){',
+    '      value=value*(1.+.42*smoothstep(68.,128.,returnTime))*rasterMask+returnAfterglow(screenN);',
+    '    } else {',
+    '      float warmBoost=1.+.24*(1.-smoothstep(172.,335.,returnTime));',
+    '      value=value*warmBoost*returnCurtain+returnBeam+returnAfterglow(screenN);',
+    '    }',
+    '  }',
+    '  float terrain=home ? smoothstep(.62,.79,q.y)*.94*power*rasterMask*returnCurtain : 0.;',
     '  if(closeup) value=max(value*.88,sharp*.70);',
     '  color=phosphor(value,terrain);',
     '}'
@@ -248,7 +332,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
   gl.useProgram(program);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   const uniforms = Object.fromEntries(
-    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','signalY','entryTime','entryCaret','bend','artwork']
+    ['size','viewport','pointer','pointerPresence','panel','writeBounds','writeEdge','panelRefresh','elapsed','power','home','closeup','signalTex','signalX','signalY','entryTime','returnTime','entryCaret','bend','artwork']
       .map(name => [name, gl.getUniformLocation(program, name)])
   );
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -257,6 +341,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.uniform1i(uniforms.signalTex, 0);
+  gl.uniform2f(uniforms.signalX,1,0);
   gl.uniform2f(uniforms.signalY,1,0);
   const home = root.id === 'zoea-monitor';
   gl.uniform1i(uniforms.home, home ? 1 : 0);
@@ -293,8 +378,9 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     const dt = last ? Math.max(0,now-last)/1000 : 0;
     last = Math.max(last,now);
     const entryTime = reduced.matches ? -1 : root.crtEntryTime?.(now) ?? -1;
-    const holdHome = home && entryTime>=0;
-    if (!holdHome) {
+    const returnTime = reduced.matches ? -1 : root.crtReturnTime?.(now) ?? -1;
+    const holdScene = (home && entryTime>=0) || (!home && returnTime>=0);
+    if (!holdScene) {
       if (!reduced.matches) seconds += dt / geometry.durationScale;
       x += (targetX-x)*(1-Math.exp(-dt*10));
       y += (targetY-y)*(1-Math.exp(-dt*10));
@@ -304,7 +390,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     const pointerX = x*tilt, pointerY = y*tilt;
     updateHitAreas?.(pointerX,pointerY,bend);
     const redraw = lastScene === -Infinity || (animateSignal && !reduced.matches && now-lastScene >= 15);
-    if (renderScene && (holdHome ? !textureWidth : redraw)) {
+    if (renderScene && (holdScene ? !textureWidth : redraw)) {
       const still = reduced.matches;
       upload(renderScene(still ? 0 : seconds, pointerX, pointerY, still));
       lastScene = now;
@@ -340,6 +426,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     }
     gl.uniform1f(uniforms.power,reduced.matches ? 1 : root.crtPower?.() ?? 1);
     gl.uniform1f(uniforms.entryTime,entryTime);
+    gl.uniform1f(uniforms.returnTime,returnTime);
     gl.uniform4fv(uniforms.entryCaret,entryCaret);
     gl.uniform1f(uniforms.elapsed, reduced.matches ? 0 : seconds);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -385,10 +472,12 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
     lastScene = -Infinity;
     schedule();
   });
-  geometry.compactTouch.addEventListener('change',()=>{
-    lastScene = -Infinity;
-    schedule();
-  });
+  for (const media of [geometry.compactTouch, geometry.narrowPortrait]) {
+    media.addEventListener('change',()=>{
+      lastScene = -Infinity;
+      schedule();
+    });
+  }
 
   let textureWidth = 0, textureHeight = 0;
   function upload(layer) {
@@ -404,6 +493,7 @@ window.createCrt = function createCrt(root,{closeup=false,bendScale=1,pointerSur
   }
 
   root.crtLive = {
+    setSignalX(scale,offset) { gl.uniform2f(uniforms.signalX,scale,offset); },
     setSignalY(scale,offset) { gl.uniform2f(uniforms.signalY,scale,offset); },
     setPanel(bounds) { panelBounds = bounds; },
     setArtworkBounds(bounds) { gl.uniform4fv(uniforms.artwork,bounds); },

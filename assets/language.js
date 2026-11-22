@@ -27,6 +27,7 @@
     contact: 'Contact',
     showQq: 'Show QQ contact QR code',
     qqCode: 'QQ contact QR code',
+    qqScanNote: 'SCAN // UE & Modeling Course Inquiry',
     closeQq: 'Close QR code',
     categories: 'Project categories',
     works: 'Works',
@@ -125,8 +126,7 @@
     enableSound: 'Turn on sound',
     disableSound: 'Turn off sound'
   };
-  const button = document.querySelector('.crt-language');
-  const label = button?.querySelector('.crt-language-label');
+  const buttons = [...document.querySelectorAll('.crt-language, .archive-language')];
   const entries = [
     ...[...document.querySelectorAll('[data-i18n]')].map(element=>({
       key:element.dataset.i18n, chinese:element.textContent,
@@ -155,15 +155,20 @@
   function apply() {
     document.documentElement.lang = language;
     for (const entry of entries) entry.update(text(entry.key,entry.chinese));
-    if (!button) return;
-    label.textContent = language==='en' ? 'CN' : 'EN';
-    button.title = language==='en' ? 'Switch to Chinese' : '切换到英文';
-    button.setAttribute('aria-label',button.title);
+    const nextCode = language==='en' ? 'CN' : 'EN';
+    const nextTitle = language==='en' ? 'Switch to Chinese' : '切换到英文';
+    for (const button of buttons) {
+      const label = button.querySelector('.crt-language-label');
+      if (label) label.textContent = nextCode;
+      else button.textContent = nextCode;
+      button.title = nextTitle;
+      button.setAttribute('aria-label',nextTitle);
+    }
   }
 
   window.zoeaLocale = {text};
   apply();
-  if (button) {
+  for (const button of buttons) {
     button.hidden = false;
     button.addEventListener('click',()=>{
       language = language==='en' ? 'zh-CN' : 'en';

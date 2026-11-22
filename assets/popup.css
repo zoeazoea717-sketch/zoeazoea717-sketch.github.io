@@ -1,4 +1,4 @@
-html:has(#zoea-archive:not([hidden])) { scrollbar-gutter: stable; }
+html:has(#zoea-archive:not([hidden])) { scrollbar-gutter: stable; background-color: #0b0603; }
 
 #zoea-archive dialog.preview-dialog::backdrop {
   background: radial-gradient(ellipse at center, #10090566 10%, #100905a6 65%, #100905d9);
@@ -49,7 +49,7 @@ html:has(#zoea-archive:not([hidden])) { scrollbar-gutter: stable; }
 }
 #zoea-archive :is(dialog.preview-dialog,#dossier-entry)
   :is(h2,h3,p,li,label,a,output,figcaption,.entry-path,.entry-signature,.entry-toolbar-title,
-      .dossier-status,.dossier-frame-count,.dossier-image-caption,button:not(.preview-close,.dossier-original)):not(.dossier-heading-live) {
+      .dossier-status,.dossier-frame-count,.dossier-image-caption,.qq-caption,button:not(.preview-close,.dossier-original)):not(.dossier-heading-live) {
   text-shadow: var(--ink-glow);
   @supports (background-clip: text) {
     /* Native CRT headings already provide their own rendered dot layer. */

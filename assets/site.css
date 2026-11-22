@@ -1,10 +1,47 @@
 html {
   color-scheme: dark;
-  background: radial-gradient(ellipse at 24% 30%,#241209,#100905 74%) fixed;
+  background:
+    radial-gradient(ellipse 68% 58% at 24% 26%, #29140a 0%, transparent 68%),
+    radial-gradient(ellipse 92% 86% at 50% 50%, #150b06 0%, #0d0704 72%, #070302 100%);
+  background-color: #0d0704;
+  background-attachment: fixed;
+  scrollbar-width: thin;
+  scrollbar-color: #9a623360 #0b0603;
   --terminal-font: 'Lucida Console','Courier New','Microsoft YaHei UI',monospace;
   --crt-text-scale: 1;
   --crt-duration-scale: 2;
 }
+html::-webkit-scrollbar,
+#zoea-archive .asset-glass::-webkit-scrollbar,
+#zoea-archive .dossier-profile-content::-webkit-scrollbar,
+#zoea-archive #dossier-details::-webkit-scrollbar,
+#zoea-archive #dossier-entry::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+html::-webkit-scrollbar-track,
+#zoea-archive .asset-glass::-webkit-scrollbar-track,
+#zoea-archive .dossier-profile-content::-webkit-scrollbar-track,
+#zoea-archive #dossier-details::-webkit-scrollbar-track,
+#zoea-archive #dossier-entry::-webkit-scrollbar-track {
+  background: #0b0603;
+}
+html::-webkit-scrollbar-thumb,
+#zoea-archive .asset-glass::-webkit-scrollbar-thumb,
+#zoea-archive .dossier-profile-content::-webkit-scrollbar-thumb,
+#zoea-archive #dossier-details::-webkit-scrollbar-thumb,
+#zoea-archive #dossier-entry::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8c562848, #c783436e 50%, #8c562848);
+  border-left: 1px solid #1c0e06;
+}
+html::-webkit-scrollbar-thumb:hover,
+#zoea-archive .asset-glass::-webkit-scrollbar-thumb:hover,
+#zoea-archive .dossier-profile-content::-webkit-scrollbar-thumb:hover,
+#zoea-archive #dossier-details::-webkit-scrollbar-thumb:hover,
+#zoea-archive #dossier-entry::-webkit-scrollbar-thumb:hover {
+  background: #d9914caa;
+}
+html::-webkit-scrollbar-corner { background: #0b0603; }
 html:fullscreen { --crt-text-scale: 2; }
 @media (display-mode: fullscreen) { html { --crt-text-scale: 2; } }
 body { margin: 0; }

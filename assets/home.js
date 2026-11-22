@@ -54,11 +54,12 @@
     return sprite;
   }
 
-  function prepareTerrain(w,h,scale) {
-    if (terrainGrid?.w===w && terrainGrid.h===h && terrainGrid.scale===scale) return terrainGrid.rows;
+  function prepareTerrain(w,h,scale,padX=0,padB=0) {
+    if (terrainGrid?.w===w && terrainGrid.h===h && terrainGrid.scale===scale && terrainGrid.padX===padX && terrainGrid.padB===padB) return terrainGrid.rows;
     terrainSprites.clear();
+    const tw = w+padX*2, th = h+padB;
     const rows = [];
-    const center = w*.51;
+    const center = padX+w*.51;
     for (let row=0;row<116;row++) {
       const depth = 30*Math.pow(.964,row)+.46;
       const perspective = h*.86/depth;
@@ -66,15 +67,15 @@
       const step = Math.max(2.6,Math.min(8.4,perspective*.052));
       const size = Math.min(w/h>1.3?10.3:8.4,3.1+perspective*.049);
       const points = [];
-      for (let px=-step;px<w+step;px+=step) {
+      for (let px=-step;px<tw+step;px+=step) {
         points.push({x:px, worldX:(px-center)/perspective+.16, pool:bell((px-center)/(w*.32)), y:0, height:0});
       }
       const unresolved = perspective<Math.max(32,h*.053);
       rows.push({depth,perspective,step,size,points,unresolved,sprite:getTerrainSprites(size,scale),
         strokes:Array.from({length:strokeLevels+1},()=>[])});
     }
-    const renderer = terrainRenderer?.available && terrainRenderer.resize(w,h,scale,rows) ? terrainRenderer : null;
-    terrainGrid = {w,h,scale,rows,renderer};
+    const renderer = terrainRenderer?.available && terrainRenderer.resize(tw,th,scale,rows) ? terrainRenderer : null;
+    terrainGrid = {w,h,scale,padX,padB,tw,th,rows,renderer};
     return rows;
   }
   function paint(surface) {
@@ -334,12 +335,13 @@
     return ridge*valley;
   }
 
-  function drawTerrain(target,w,h,horizon,time,pointerX,pointerY,still,scale) {
+  function drawTerrain(target,w,h,horizon,time,pointerX,pointerY,still,scale,padX=0,padB=0) {
     const travel = still ? 0 : .49*Math.sin(time*.43)+.17*Math.sin(time*.91);
     target.textAlign = 'center';
     target.textBaseline = 'middle';
     const sweep = time*.24+pointerX*.08;
-    const rows = prepareTerrain(w,h,scale);
+    const rows = prepareTerrain(w,h,scale,padX,padB);
+    const {tw,th} = terrainGrid;
     const renderer = terrainGrid.renderer?.available ? terrainGrid.renderer : null;
     renderer?.begin();
     for (const {depth,perspective,points} of rows) {
@@ -355,7 +357,7 @@
     // The opaque slopes in front already cover these marks. Keep a conservative
     // horizon per screen interval, including the full footprint of each glyph.
     const interval = 4;
-    const occlusion = terrainGrid.occlusion ??= new Float32Array(Math.ceil(w/interval));
+    const occlusion = terrainGrid.occlusion ??= new Float32Array(Math.ceil(tw/interval));
     occlusion.fill(Infinity);
     for (let row=rows.length-1;row>=0;row--) {
       const terrainRow = rows[row];
@@ -379,7 +381,7 @@
       let i = 1;
       for (let slot=0;slot<occlusion.length;slot++) {
         const left = slot*interval;
-        const right = Math.min(w,left+interval);
+        const right = Math.min(tw,left+interval);
         while (points[i].x<left) i++;
         const previous = points[i-1];
         const next = points[i];
@@ -394,6 +396,8 @@
       }
     }
 
+    target.save();
+    if (padX) target.translate(-padX,0);
     for (const {depth,step,size:glyphSize,points,unresolved,sprite,strokes,visible} of rows) {
       const worldZ = depth+travel;
       if (!visible) {
@@ -403,12 +407,12 @@
       }
 
       if (renderer) {
-        for (let i=1;i<points.length;i++) renderer.slope(points[i-1],points[i],h+3);
+        for (let i=1;i<points.length;i++) renderer.slope(points[i-1],points[i],th+3);
       } else {
         target.beginPath();
-        target.moveTo(-step,h+3);
+        target.moveTo(-step,th+3);
         for (const point of points) target.lineTo(point.x,point.y);
-        target.lineTo(w+step,h+3);
+        target.lineTo(tw+step,th+3);
         target.closePath();
         target.fillStyle = '#020202';
         target.fill();
@@ -420,12 +424,12 @@
       for (let i=1;i<points.length;i++) {
         const point = points[i];
         const grain = random();
-        if (!point.visible || point.y>h+5) continue;
+        if (!point.visible || point.y>th+5) continue;
         const x = point.worldX+pointerX*.30;
         const slope = (elevation(x+.065,worldZ)-point.height)/.065;
         const depthLight = bell((point.y-horizon)/(h*.16));
         const trace = still ? 0 : bell(Math.sin(worldZ*.44+x*.24-time*1.6)/.17);
-        const spot = bell((point.x/w-.5-pointerX*.45)/.2)*Math.abs(pointerY);
+        const spot = bell(((point.x-padX)/w-.5-pointerX*.45)/.2)*Math.abs(pointerY);
         const light = clamp(.25+point.pool*(.11+depthLight*.37)+slope*.14+point.height*.21+.18*trace+.11*spot);
         const intensity = clamp(light*(.65+grain*.53));
         point.intensity = intensity;
@@ -452,10 +456,10 @@
       if (unresolved) continue;
       for (let i=1;i<points.length;i++) {
         const point = points[i];
-        if (!point.visible || point.y>h+5) continue;
+        if (!point.visible || point.y>th+5) continue;
         const {grain,intensity} = point;
         const initial = Math.floor(grain*glyphs.length);
-        const tick = still ? 0 : Math.floor(sweep-point.x/w)+1;
+        const tick = still ? 0 : Math.floor(sweep-(point.x-padX)/w)+1;
         if (step>=3.15 || grain>.36) {
           const index = ((initial+tick)%glyphs.length+glyphs.length)%glyphs.length;
           if (renderer) renderer.glyph(sprite,index,point.x-span/2,point.y-span/2,intensity);
@@ -476,19 +480,21 @@
         }
       }
     }
-    renderer?.draw(target,w,h);
+    renderer?.draw(target,tw,th);
+    target.restore();
   }
 
-  function buildSignal(w,h,scale=1,time=0,pointerX=0,pointerY=0,still=true,live=false) {
+  function buildSignal(w,h,scale=1,time=0,pointerX=0,pointerY=0,still=true,live=false,padX=0,padTop=0,padB=0) {
     seed = 71593;
-    const width = Math.round(w*scale), height = Math.round(h*scale);
+    const totalW = w+padX*2, totalH = h+padTop+padB;
+    const width = Math.round(totalW*scale), height = Math.round(totalH*scale);
     if (layers?.[0].canvas.width !== width || layers[0].canvas.height !== height) {
       layers = Array.from({length:3},()=>makeLayer(width,height));
     }
     const [signal,diffuse,halo] = layers;
-    signal.setTransform(scale,0,0,scale,0,0);
+    signal.setTransform(scale,0,0,scale,padX*scale,padTop*scale);
     signal.fillStyle = '#000';
-    signal.fillRect(0,0,w,h);
+    signal.fillRect(-padX,-padTop,totalW,totalH);
     if (!live) drawBackground(signal,w,h,scale);
     const horizon = h*(.555+pointerY*.012);
 
@@ -507,12 +513,12 @@
       }
     }
 
-    drawTerrain(signal,w,h,horizon,time,pointerX,pointerY,still,scale);
+    drawTerrain(signal,w,h,horizon,time,pointerX,pointerY,still,scale,padX,padB);
     signal.globalCompositeOperation = 'screen';
     const lightX = w*(.51+pointerX*.047);
     const light = still ? 1 : 1+.08*Math.sin(time*1.15);
-    fillGlow(signal,lightX,horizon+h*.059,w*.39,h*.084,.46*light);
-    fillGlow(signal,lightX,horizon+h*.052,w*.23,h*.016,.51*light);
+    fillGlow(signal,lightX,horizon+h*.059,w*.37,h*.078,.36*light);
+    fillGlow(signal,lightX,horizon+h*.052,w*.21,h*.015,.39*light);
     signal.globalCompositeOperation = 'source-over';
     drawLogo(signal,w,h,time,pointerX,pointerY,still,live);
     if (live) return signal.canvas;
@@ -605,8 +611,15 @@
     dimensions = size;
     cancelAnimationFrame(frame);
     if (root.crtLive) {
-      const scale = Math.min(Math.max(1,density),2.5,Math.sqrt(7500000/(width*height)));
-      root.crtLive.setScene((time,x,y,still)=>buildSignal(width,height,scale,time,x,y,still,true));
+      // Overscan on all four sides so curved UV sampling and mipmap glow never touch texture borders.
+      const padX = Math.ceil(width*.055);
+      const padTop = Math.ceil(height*.08);
+      const padB = Math.ceil(height*.045);
+      const totalW = width+padX*2, totalH = height+padTop+padB;
+      root.crtLive.setSignalX(width/totalW, padX/totalW);
+      root.crtLive.setSignalY(height/totalH, padTop/totalH);
+      const scale = Math.min(Math.max(1,density),2.5,Math.sqrt(7500000/(totalW*totalH)));
+      root.crtLive.setScene((time,x,y,still)=>buildSignal(width,height,scale,time,x,y,still,true,padX,padTop,padB));
       return;
     }
     const scale = Math.min(1.35,1140/width,1000/height);

@@ -299,6 +299,35 @@
     const file = openFile && !openFile.hidden ? openFile : null;
     const divider = file?.querySelector('.file-divider');
     const example = file?.querySelector('.asset-example');
+    const emptySlots = [];
+    for (const grid of root.querySelectorAll('.file-grid, #public-projects')) {
+      if (!grid.getClientRects().length || grid.closest('[hidden]')) continue;
+      const colTrack = getComputedStyle(grid).gridTemplateColumns.trim();
+      const colSizes = colTrack ? colTrack.split(/\s+/).map(parseFloat).filter(n=>n>0) : [];
+      const cols = colSizes.length;
+      const items = [...grid.children].filter(child=>child.getClientRects().length);
+      if (cols > 1 && items.length > 0 && items.length < cols) {
+        const gBox = measureBox(grid);
+        const firstBox = measureBox(items[0]);
+        const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+        const padLeft = parseFloat(getComputedStyle(grid).paddingLeft) || 0;
+        const centerY = firstBox.top + firstBox.height / 2;
+        let cursorX = gBox.left + padLeft;
+        for (let c = 0; c < cols; c++) {
+          const w = colSizes[c];
+          if (c >= items.length) {
+            emptySlots.push({cx: cursorX + w / 2, cy: centerY, w, h: firstBox.height});
+          }
+          cursorX += w + gap;
+        }
+      }
+    }
+    const aboutRules = aboutContent.hidden ? [] : [...aboutContent.querySelectorAll('.about-copy > section')]
+      .filter(sec=>sec.getClientRects().length)
+      .map(sec=>{
+        const b = measureBox(sec);
+        return {left: b.left, top: b.top - 11, width: b.width};
+      });
     const cardLayouts = [...worksDirectory.querySelectorAll('.dossier-card')]
       .filter(card=>card.dataset.project && card.getClientRects().length)
       .map(card=>({
@@ -310,7 +339,10 @@
       }));
     const shelf = find('#dossier-student-projects');
     const bay = find('.dossier-bay');
-    return {layout,cardLayouts,panel:measureBox(panel),heading:measureBox(heading),shelfBox:shelf.getClientRects().length ? measureBox(shelf) : null, bay:bay.getClientRects().length ? measureBox(bay) : null,
+    const formatCount = (n, singular, plural) => String(n).padStart(2,'0')+' '+(n===1 ? singular : plural);
+    const publicCount = root.querySelectorAll('#public-projects .dossier-card').length;
+    const versionText = file?.querySelector('.file-summary dd:nth-of-type(2)')?.textContent?.trim() ?? '';
+    return {layout,cardLayouts,emptySlots,aboutRules,panel:measureBox(panel),heading:measureBox(heading),shelfBox:shelf.getClientRects().length ? measureBox(shelf) : null, bay:bay.getClientRects().length ? measureBox(bay) : null,
       engravings:[...worksDirectory.querySelectorAll('.dossier-metal')].filter(mark=>mark.getClientRects().length)
         .map(mark=>({box:measureBox(mark), horizontal:mark.classList.contains('cassette-grip')})),
       dossierBars:[...worksReady.querySelectorAll('.dossier-resume-launch,.dossier-lock,.dossier-group-toggle')]
@@ -326,14 +358,20 @@
       focusBoxes:new Map(controls.filter(control=>control.getClientRects().length).map(control=>[control,measureBox(control)])),
       staticWindows:[...root.querySelectorAll('.public-works-bar')]
         .filter(bar=>!bar.closest('dialog') && bar.getClientRects().length)
-        .map(bar=>({box:measureBox(bar.parentElement),bar:measureBox(bar)})),
-      groups:disclosures.filter(button=>button.getClientRects().length).map(button=>({
-        button,box:measureBox(button.closest('section')),bar:measureBox(button.parentElement)
-      })),
+        .map(bar=>({box:measureBox(bar.parentElement),bar:measureBox(bar),status:formatCount(publicCount,'ENTRY','ENTRIES')})),
+      groups:disclosures.filter(button=>button.getClientRects().length).map(button=>{
+        const targetId = button.getAttribute('aria-controls');
+        const groupGrid = targetId ? document.getElementById(targetId) : null;
+        let status = '';
+        if (button===privateToggle) status = worksUnlocked ? 'UNLOCKED' : 'LOCKED // AES';
+        else if (groupGrid) status = formatCount(groupGrid.querySelectorAll('.file-tile').length,'ITEM','ITEMS');
+        return {button,box:measureBox(button.closest('section')),bar:measureBox(button.parentElement),status};
+      }),
       properties:file ? {
         box:measureBox(file),bar:measureBox(file.querySelector('.file-bar')),
         footer:measureBox(file.querySelector('.file-actions')),
-        divider:divider ? measureBox(divider) : null
+        divider:divider ? measureBox(divider) : null,
+        status:versionText ? 'SPEC // '+versionText : ''
       } : null,
       actions:file ? [...file.querySelectorAll('.file-action')].map(action=>({action,...measureBox(action)})) : []
     };
@@ -350,7 +388,7 @@
     const scaleX = width/display.clientWidth;
     const scaleY = height/(display.clientHeight+2*bleed);
     labelsCtx.setTransform(scaleX,0,0,scaleY,0,(offsetY+bleed)*scaleY);
-    const {layout,cardLayouts,dossierBars,bay,engravings,soundIcon,contactIcons,tiles,groups,properties,files,actions,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
+    const {layout,cardLayouts,emptySlots,aboutRules,dossierBars,bay,engravings,soundIcon,contactIcons,tiles,groups,properties,files,actions,example,focusBoxes,staticWindows} = labelLayout ?? measureLabels();
     for (const {icon,width} of files) paintFileIcon(icon,width,Math.max(1,scaleX));
     if (root.crtLive) {
       const highlighted = control=>control.matches(':hover,:focus-visible');
@@ -359,23 +397,91 @@
         labelsCtx.globalAlpha = alpha;
         labelsCtx.strokeRect(left,top,width,height);
       }
-      function drawWindow(box,bar,hasBody,lit) {
-        outline(box,lit ? .65 : .42);
+      function drawCorners({left,top,width,height},arm,thick,alpha) {
         labelsCtx.fillStyle = '#fff';
-        labelsCtx.globalAlpha = lit ? .18 : .10;
-        labelsCtx.fillRect(bar.left,bar.top,bar.width,bar.height);
-        if (hasBody) {
-          labelsCtx.globalAlpha = lit ? .65 : .40;
-          labelsCtx.fillRect(box.left,bar.top+bar.height-.5,box.width,1);
+        labelsCtx.globalAlpha = alpha;
+        for (const dx of [1,-1]) {
+          for (const dy of [1,-1]) {
+            const x = dx>0 ? left : left+width;
+            const y = dy>0 ? top : top+height;
+            labelsCtx.fillRect(x,y,dx*arm,dy*thick);
+            labelsCtx.fillRect(x,y,dx*thick,dy*arm);
+          }
         }
       }
-      for (const {button,box,bar} of groups) {
-        drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
+      function drawWindow(box,bar,hasBody,lit,status='') {
+        outline(box,lit ? .68 : .43);
+        const wash = labelsCtx.createLinearGradient(bar.left,bar.top,bar.left+bar.width,bar.top);
+        wash.addColorStop(0,lit ? 'rgba(255,255,255,.21)' : 'rgba(255,255,255,.13)');
+        wash.addColorStop(.55,lit ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.085)');
+        wash.addColorStop(1,lit ? 'rgba(255,255,255,.09)' : 'rgba(255,255,255,.045)');
+        labelsCtx.globalAlpha = 1;
+        labelsCtx.fillStyle = wash;
+        labelsCtx.fillRect(bar.left,bar.top,bar.width,bar.height);
+        // Subtle horizontal CRT ribbing inside header bar to match modal scanbars.
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.globalAlpha = lit ? .075 : .048;
+        for (let y = bar.top + 2; y < bar.top + bar.height - 1; y += 3) {
+          labelsCtx.fillRect(bar.left + 1, y, bar.width - 2, 1);
+        }
+        // Crisp 1px top highlight and optional active left indicator tick.
+        labelsCtx.globalAlpha = lit ? .70 : .46;
+        labelsCtx.fillRect(box.left,bar.top,box.width,1);
+        if (lit) {
+          labelsCtx.globalAlpha = .88;
+          labelsCtx.fillRect(bar.left + 2, bar.top + bar.height*.26, 2, bar.height*.48);
+        }
+        if (hasBody) {
+          labelsCtx.globalAlpha = lit ? .68 : .42;
+          labelsCtx.fillRect(box.left,bar.top+bar.height-.5,box.width,1);
+        }
+        if (status && bar.width >= 380) {
+          labelsCtx.save();
+          labelsCtx.font = '700 '+Math.max(10,Math.min(16,bar.height*.22))+'px Consolas, "Courier New", monospace';
+          labelsCtx.textAlign = 'right';
+          labelsCtx.textBaseline = 'middle';
+          labelsCtx.fillStyle = '#fff';
+          labelsCtx.globalAlpha = lit ? .58 : .32;
+          labelsCtx.fillText(status,bar.left+bar.width-Math.min(18,bar.width*.03),bar.top+bar.height*.5);
+          labelsCtx.restore();
+        }
       }
-      for (const {box,bar} of staticWindows) drawWindow(box,bar,true,false);
+      for (const {button,box,bar,status} of groups) {
+        drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button),status);
+      }
+      for (const {box,bar,status} of staticWindows) drawWindow(box,bar,true,false,status);
       for (const {button,bar,box} of dossierBars) {
         if (button.classList.contains('dossier-lock')) outline(bar,highlighted(button) ? .65 : .35);
         else drawWindow(box,bar,button.getAttribute('aria-expanded')==='true',highlighted(button));
+      }
+      // Subtle oscilloscope registration crosshairs for unoccupied desktop grid slots.
+      if (emptySlots.length) {
+        labelsCtx.fillStyle = '#fff';
+        for (const {cx,cy,w,h} of emptySlots) {
+          const half = 4;
+          labelsCtx.globalAlpha = .13;
+          labelsCtx.fillRect(cx - half, cy - .5, half * 2, 1);
+          labelsCtx.fillRect(cx - .5, cy - half, 1, half * 2);
+          const insetX = Math.min(w * .36, 48);
+          const insetY = Math.min(h * .36, 40);
+          labelsCtx.globalAlpha = .075;
+          for (const sx of [-1, 1]) {
+            for (const sy of [-1, 1]) {
+              labelsCtx.fillRect(cx + sx * insetX, cy + sy * insetY, -sx * 4, 1);
+              labelsCtx.fillRect(cx + sx * insetX, cy + sy * insetY, 1, -sy * 4);
+            }
+          }
+        }
+      }
+      // Quiet architectural divider rules between About sections.
+      if (aboutRules.length) {
+        labelsCtx.fillStyle = '#fff';
+        for (const {left,top,width} of aboutRules) {
+          labelsCtx.globalAlpha = .16;
+          labelsCtx.fillRect(left + 10, top, Math.max(0, width - 10), 1);
+          labelsCtx.globalAlpha = .34;
+          labelsCtx.fillRect(left, top - .5, 4, 2);
+        }
       }
       if (bay) {
         labelsCtx.save();
@@ -396,22 +502,13 @@
         paintCardImage({image,imageBox});
         if (lit) {
           labelsCtx.fillStyle = '#fff';
-          labelsCtx.globalAlpha = .08;
+          labelsCtx.globalAlpha = .075;
           labelsCtx.fillRect(box.left,box.top,box.width,box.height);
         }
         outline(box,lit ? .86 : .43);
-        outline(imageBox,lit ? .60 : .34);
-        labelsCtx.fillStyle = '#fff';
-        labelsCtx.globalAlpha = lit ? 1 : .82;
-        const arm = Math.min(12,Math.max(8,Math.round(box.width*.045)));
-        for (const dx of [1,-1]) {
-          for (const dy of [1,-1]) {
-            const x = dx>0 ? corners.left : corners.left+corners.width;
-            const y = dy>0 ? corners.top : corners.top+corners.height;
-            labelsCtx.fillRect(x,y,dx*arm,dy*2);
-            labelsCtx.fillRect(x,y,dx*2,dy*arm);
-          }
-        }
+        outline(imageBox,lit ? .66 : .34);
+        const arm = Math.min(13,Math.max(8,Math.round(box.width*.045))) + (lit ? 2 : 0);
+        drawCorners(corners,arm,2,lit ? 1 : .82);
       }
       // The fallback stripes use the same mark boxes, pitch and stroke widths.
       labelsCtx.fillStyle = '#fff';
@@ -424,11 +521,17 @@
         }
       }
       for (const {tile,...box} of tiles) {
-        if (highlighted(tile)) outline(box,.36);
+        if (highlighted(tile)) {
+          labelsCtx.fillStyle = '#fff';
+          labelsCtx.globalAlpha = .05;
+          labelsCtx.fillRect(box.left,box.top,box.width,box.height);
+          outline(box,.28);
+          drawCorners(box,9,1.5,.86);
+        }
       }
       if (properties) {
-        const {box,bar,footer,divider} = properties;
-        drawWindow(box,bar,true,false);
+        const {box,bar,footer,divider,status} = properties;
+        drawWindow(box,bar,true,false,status);
         labelsCtx.globalAlpha = .40;
         labelsCtx.fillRect(box.left,footer.top-.5,box.width,1);
         if (divider) {
@@ -436,11 +539,19 @@
           labelsCtx.fillRect(divider.left,divider.top,divider.width,divider.height);
         }
         for (const {action,...box} of actions) {
-          outline(box,highlighted(action) ? .75 : action.matches('.file-download') ? .46 : .30);
+          const lit = highlighted(action);
+          const primary = action.matches('.file-download');
+          if (lit) {
+            labelsCtx.fillStyle = '#fff';
+            labelsCtx.globalAlpha = .09;
+            labelsCtx.fillRect(box.left,box.top,box.width,box.height);
+          }
+          outline(box,lit ? .84 : primary ? .48 : .32);
+          if (primary || lit) drawCorners(box,5,1.2,lit ? .92 : .55);
         }
       }
       for (const {icon,tile,x,y,width,height} of files) {
-        labelsCtx.globalAlpha = tile && highlighted(tile) ? 1 : .80;
+        labelsCtx.globalAlpha = tile && highlighted(tile) ? 1 : .82;
         labelsCtx.drawImage(icon,x-width/2,y-height/2,width,height);
       }
       const focusBox = focusBoxes.get(document.activeElement);
@@ -502,7 +613,22 @@
     if (root.crtLive) for (const {img,box:{x,y,width:w,height:h}} of contactIcons) {
       if (!w || !img.complete || !img.naturalWidth) continue;
       const control = img.parentElement;
-      labelsCtx.globalAlpha = control.matches(':hover,:focus-visible') ? .99 : .82;
+      const lit = control.matches(':hover,:focus-visible');
+      if (control.matches('.about-contact') && lit) {
+        const padX = 11, padY = 9;
+        const b = {left:x-w/2-padX,top:y-h/2-padY,width:w+padX*2,height:h+padY*2};
+        labelsCtx.fillStyle = '#fff';
+        labelsCtx.globalAlpha = .78;
+        for (const dx of [1,-1]) {
+          for (const dy of [1,-1]) {
+            const cx = dx>0 ? b.left : b.left+b.width;
+            const cy = dy>0 ? b.top : b.top+b.height;
+            labelsCtx.fillRect(cx,cy,dx*6,dy*1.5);
+            labelsCtx.fillRect(cx,cy,dx*1.5,dy*6);
+          }
+        }
+      }
+      labelsCtx.globalAlpha = lit ? .99 : .84;
       labelsCtx.drawImage(control.matches('.archive-portals a') ? window.crtIconMask(img) : img,x-w/2,y-h/2,w,h);
       control.classList.add('crt-icon-ready');
     }
@@ -535,7 +661,8 @@
       pen.fillText(line.text,1,mask.height/(2*scale));
       cells = document.createElement('canvas');
       cells.width = mask.width; cells.height = mask.height;
-      drawPhosphorDots(cells.getContext('2d'),pen.getImageData(0,0,mask.width,mask.height).data,mask.width,mask.height,2.05*scale,0,0);
+      const pitch = Math.max(1.38, Math.min(2.05, size / 11.5)) * scale;
+      drawPhosphorDots(cells.getContext('2d'),pen.getImageData(0,0,mask.width,mask.height).data,mask.width,mask.height,pitch,0,0);
       titleStamps.set(id,cells);
     }
     labelsCtx.drawImage(cells,line.left-1,line.middle-cells.height/(2*scale),cells.width/scale,cells.height/scale);
@@ -1285,6 +1412,7 @@
   }
   new ResizeObserver(setAssetCurve).observe(assetScreen);
   geometry.compactTouch.addEventListener('change',setAssetCurve);
+  geometry.narrowPortrait?.addEventListener('change',setAssetCurve);
   const openAssetViewer = bindPreview(assetViewer,assetViewer.querySelector('.asset-glass'),[],.82,setAssetCurve);
   for (const opener of root.querySelectorAll('.preview-thumb')) {
     opener.addEventListener('click',()=>{

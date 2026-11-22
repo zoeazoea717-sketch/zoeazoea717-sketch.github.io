@@ -21,8 +21,11 @@
   let poweringOff = false;
   let duration = 1;
   let entryStart = null, entryFrame = 0;
+  let returnStart = null, returnFrame = 0;
   const entryHandoff = 182, entryInteractive = 405, entryEnd = 460;
+  const returnHandoff = 152, returnInteractive = 330, returnEnd = 385;
   home.crtEntryTime = archive.crtEntryTime = now => entryStart === null ? -1 : (now-entryStart)/geometry.durationScale;
+  home.crtReturnTime = archive.crtReturnTime = now => returnStart === null ? -1 : (now-returnStart)/geometry.durationScale;
   const screenPower = () => {
     if (!effect || effect.playState==='finished') return poweringOff ? 0 : 1;
     const progress = Math.min(1,Math.max(0,(effect.currentTime ?? 0)/duration));
@@ -194,6 +197,7 @@
   }
   new ResizeObserver(resize).observe(background);
   geometry.compactTouch.addEventListener('change',resize);
+  geometry.narrowPortrait?.addEventListener('change',resize);
   document.addEventListener('visibilitychange',schedule);
   reduced.addEventListener('change',schedule);
 
@@ -202,11 +206,40 @@
     cancelAnimationFrame(entryFrame);
     entryFrame = 0;
     entryStart = null;
+    cancelAnimationFrame(returnFrame);
+    returnFrame = 0;
+    returnStart = null;
     effect?.cancel();
     effect = null;
     poweringOff = false;
     glass.inert = false;
     glass.classList.remove('crt-powering');
+  }
+
+  function returnHome(change, focus) {
+    returnStart = performance.now();
+    glass.inert = true;
+    let handedOff = false, interactive = false;
+    function advance(now) {
+      const time = archive.crtReturnTime(now);
+      if (!handedOff && (time>=returnHandoff || reduced.matches)) {
+        handedOff = true;
+        change();
+        home.crtLive?.present(now);
+      }
+      if (!interactive && (time>=returnInteractive || reduced.matches)) {
+        interactive = true;
+        glass.inert = false;
+        focus();
+      }
+      if (time>=returnEnd || reduced.matches) {
+        returnStart = null;
+        returnFrame = 0;
+        return;
+      }
+      returnFrame = requestAnimationFrame(advance);
+    }
+    returnFrame = requestAnimationFrame(advance);
   }
 
   function enterArchive(change, focus) {
@@ -247,7 +280,7 @@
       const dot = {opacity:0,clipPath:live ? 'inset(0)' : 'inset(49.7% 49% 49.7% 49%)'};
       glass.classList.add('crt-powering');
       return glass.animate(on ? [dot,{...beam,offset:.32},full] : [full,{...beam,offset:.78},dot],
-        {duration,fill:on ? 'none' : 'forwards'});
+        {duration,easing:on ? 'cubic-bezier(.22,1,.36,1)' : 'cubic-bezier(.55,0,1,.45)',fill:on ? 'none' : 'forwards'});
     }
     async function cycle() {
       if (close && !reduced.matches) {
@@ -318,6 +351,10 @@
     };
     if (previous==='home' && view!=='home' && !reduced.matches && home.crtLive && archive.crtLive) {
       enterArchive(change,focus);
+      return;
+    }
+    if (previous && previous!=='home' && view==='home' && !reduced.matches && home.crtLive && archive.crtLive) {
+      returnHome(change,focus);
       return;
     }
     function changeAndFocus() {
