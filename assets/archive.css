@@ -243,6 +243,12 @@
   }
   #zoea-archive .preview-pair figcaption { font-size:.84em; }
   #zoea-archive.crt-live-ready .asset-example { border-color:transparent; }
+  @container (min-width:341px) {
+    /* The 8:5 overview and square inspector share the same image height. */
+    #zoea-archive [data-file-id="shellex-studio"] .preview-pair {
+      grid-template-columns:minmax(0,8fr) minmax(0,5fr);
+    }
+  }
   @container (max-width:340px) {
     #zoea-archive .preview-pair { grid-template-columns:1fr; }
   }
@@ -454,6 +460,14 @@
     #zoea-archive .file-divider { align-self:stretch; }
     #zoea-archive .file-art { width:min(86%,500px,40svh); }
     #zoea-archive .file-description { max-inline-size:80ch; }
+    #zoea-archive [data-file-id="shellex-studio"] .file-summary {
+      align-self:stretch;
+      grid-template-rows:auto 1fr;
+      align-content:stretch;
+      row-gap:0;
+    }
+    #zoea-archive [data-file-id="shellex-studio"] .file-art { place-self:center; }
+    #zoea-archive [data-file-id="shellex-studio"] .file-description { max-inline-size:none; }
   }
   @media(max-width:580px) {
     #zoea-archive header { min-height:54px; }

@@ -933,8 +933,9 @@
 
   function paintShellExIcon(artwork) {
     const pen = titleCtx;
-    const shell = new Path2D('M34 5 C45.2 5 50.9 11.3 51.6 23.5 C52.1 32 54 38.4 54 45 C54 55.8 46.9 63 34 63 C21.1 63 14 55.8 14 45 C14 38.4 15.9 32 16.4 23.5 C17.1 11.3 22.8 5 34 5 Z');
-    const rightButton = new Path2D('M36.3 7.7 C45.6 8.3 48.8 14.6 49.3 23.8 L49.6 28.9 Q44.5 31.6 36.3 32.1 Z');
+    const shell = new Path2D();
+    shell.roundRect(18.5,5,31,58,15.5);
+    const rightButton = new Path2D('M36.3 7.4 A13.4 13.4 0 0 1 47.4 20.5 V29.6 Q42.4 31.3 36.3 31.7 Z');
     pen.save();
     pen.lineCap = 'round';
     pen.lineJoin = 'round';
@@ -953,7 +954,7 @@
     pen.fill(rightButton);
     pen.lineWidth = artwork ? 1.05 : 2;
     pen.stroke(shell);
-    pen.stroke(new Path2D('M16.1 30.8 Q34 37.2 51.9 30.8 M34 5.6 V11 M34 26 V33.9'));
+    pen.stroke(new Path2D('M18.5 31.1 Q34 36.1 49.5 31.1 M34 5.6 V11 M34 26 V33.6'));
 
     const wheel = new Path2D();
     wheel.roundRect(31.25,12,5.5,12.6,2.75);
@@ -968,7 +969,7 @@
         pen.stroke(new Path2D('M32.6 '+y+' h2.8'));
       }
       pen.strokeStyle = 'rgba(255,255,255,.50)';
-      pen.stroke(new Path2D('M17.5 36.8 Q15.1 49.2 19.9 54.2 M50.5 36.8 Q52.9 49.2 48.1 54.2 M22.8 56.8 Q34 64.3 45.2 56.8'));
+      pen.stroke(new Path2D('M20.6 36.8 V47.5 Q20.6 51.3 22.2 54 M47.4 36.8 V47.5 Q47.4 51.3 45.8 54 M24.1 56.5 A13.4 13.4 0 0 0 43.9 56.5'));
     }
     pen.restore();
   }
