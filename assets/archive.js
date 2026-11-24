@@ -878,9 +878,9 @@
     }
   }
 
-  function drawArtworkCharacters(target,pixels,size,width) {
+  function drawArtworkCharacters(target,pixels,size,width,cellWidth=6.3) {
     const characters = ['','.',':','=','+','x+','2x','25','57','7#'];
-    const pitch = size/Math.max(32,Math.round(width/6.3));
+    const pitch = size/Math.max(32,Math.round(width/cellWidth));
     const rowPitch = pitch*1.16;
     target.textAlign = 'center';
     target.textBaseline = 'middle';
@@ -931,23 +931,46 @@
     }
   }
 
-  function paintShellExIcon() {
-    titleCtx.save();
-    titleCtx.translate(34,34);
-    titleCtx.rotate(-Math.PI/15);
-    titleCtx.beginPath();
-    titleCtx.roundRect(-16,-27,32,54,16);
-    titleCtx.stroke();
-    titleCtx.beginPath();
-    titleCtx.moveTo(2,-24);
-    titleCtx.quadraticCurveTo(13,-23,13,-10);
-    titleCtx.lineTo(13,-4);
-    titleCtx.lineTo(2,-4);
-    titleCtx.closePath();
-    titleCtx.fill();
-    titleCtx.fillRect(-14,-2,28,1.7);
-    titleCtx.fillRect(-1.4,-17,2.8,8);
-    titleCtx.restore();
+  function paintShellExIcon(artwork) {
+    const pen = titleCtx;
+    const shell = new Path2D('M34 5 C45.2 5 50.9 11.3 51.6 23.5 C52.1 32 54 38.4 54 45 C54 55.8 46.9 63 34 63 C21.1 63 14 55.8 14 45 C14 38.4 15.9 32 16.4 23.5 C17.1 11.3 22.8 5 34 5 Z');
+    const rightButton = new Path2D('M36.3 7.7 C45.6 8.3 48.8 14.6 49.3 23.8 L49.6 28.9 Q44.5 31.6 36.3 32.1 Z');
+    pen.save();
+    pen.lineCap = 'round';
+    pen.lineJoin = 'round';
+    if (artwork) {
+      const palm = pen.createRadialGradient(34,42,1,34,42,25);
+      palm.addColorStop(0,'rgba(255,255,255,.08)');
+      palm.addColorStop(.74,'rgba(255,255,255,.18)');
+      palm.addColorStop(1,'rgba(255,255,255,.34)');
+      pen.fillStyle = palm;
+      pen.fill(shell);
+    }
+    const keyLight = pen.createLinearGradient(36,31,49,10);
+    keyLight.addColorStop(0,'rgba(255,255,255,.30)');
+    keyLight.addColorStop(1,'rgba(255,255,255,.72)');
+    pen.fillStyle = keyLight;
+    pen.fill(rightButton);
+    pen.lineWidth = artwork ? 1.05 : 2;
+    pen.stroke(shell);
+    pen.stroke(new Path2D('M16.1 30.8 Q34 37.2 51.9 30.8 M34 5.6 V11 M34 26 V33.9'));
+
+    const wheel = new Path2D();
+    wheel.roundRect(31.25,12,5.5,12.6,2.75);
+    pen.save();
+    pen.clip(wheel);
+    pen.clearRect(31,11.5,6,14);
+    pen.restore();
+    pen.stroke(wheel);
+    if (artwork) {
+      pen.lineWidth = .72;
+      for (const y of [15.6,18.3,21]) {
+        pen.stroke(new Path2D('M32.6 '+y+' h2.8'));
+      }
+      pen.strokeStyle = 'rgba(255,255,255,.50)';
+      pen.stroke(new Path2D('M17.5 36.8 Q15.1 49.2 19.9 54.2 M50.5 36.8 Q52.9 49.2 48.1 54.2 M22.8 56.8 Q34 64.3 45.2 56.8'));
+    }
+    pen.restore();
   }
 
   function paintFileIcon(icon,width,density) {
@@ -962,7 +985,7 @@
     titleCtx.lineWidth = 2;
     const gwent = icon.dataset.icon==='gwent';
     const artwork = icon.classList.contains('file-art');
-    if (icon.dataset.icon==='shellex') paintShellExIcon();
+    if (icon.dataset.icon==='shellex') paintShellExIcon(artwork);
     else if (icon.dataset.icon==='downloader') paintDownloaderIcon(artwork);
     else if (artwork) {
       if (gwent) paintGwentArtwork();
@@ -973,7 +996,15 @@
     const target = icon.getContext('2d');
     if (artwork) {
       target.fillStyle = '#fff';
-      drawArtworkCharacters(target,data,size,width);
+      if (icon.dataset.icon==='shellex') {
+        // A faint continuous signal under the finer glyphs keeps the wheel and seams legible.
+        target.globalAlpha = .18;
+        target.drawImage(titleLayer,0,0);
+        target.globalAlpha = 1;
+        drawArtworkCharacters(target,data,size,width,3.8);
+      } else {
+        drawArtworkCharacters(target,data,size,width);
+      }
       if (icon.dataset.icon==='film') {
         // Punch through the final glyphs so cell size cannot shift or bridge a hole.
         target.save();
