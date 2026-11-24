@@ -931,6 +931,25 @@
     }
   }
 
+  function paintShellExIcon() {
+    titleCtx.save();
+    titleCtx.translate(34,34);
+    titleCtx.rotate(-Math.PI/15);
+    titleCtx.beginPath();
+    titleCtx.roundRect(-16,-27,32,54,16);
+    titleCtx.stroke();
+    titleCtx.beginPath();
+    titleCtx.moveTo(2,-24);
+    titleCtx.quadraticCurveTo(13,-23,13,-10);
+    titleCtx.lineTo(13,-4);
+    titleCtx.lineTo(2,-4);
+    titleCtx.closePath();
+    titleCtx.fill();
+    titleCtx.fillRect(-14,-2,28,1.7);
+    titleCtx.fillRect(-1.4,-17,2.8,8);
+    titleCtx.restore();
+  }
+
   function paintFileIcon(icon,width,density) {
     const size = Math.max(1,Math.ceil(width*density));
     if (icon.width===size && paintedIcons.has(icon)) return;
@@ -943,7 +962,8 @@
     titleCtx.lineWidth = 2;
     const gwent = icon.dataset.icon==='gwent';
     const artwork = icon.classList.contains('file-art');
-    if (icon.dataset.icon==='downloader') paintDownloaderIcon(artwork);
+    if (icon.dataset.icon==='shellex') paintShellExIcon();
+    else if (icon.dataset.icon==='downloader') paintDownloaderIcon(artwork);
     else if (artwork) {
       if (gwent) paintGwentArtwork();
       else paintFilmArtwork();

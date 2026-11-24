@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./assets/private-archive.css?v=public-dragon-girl-1">
   <link rel="stylesheet" href="./assets/private-entry.css?v=art-polish-1">
   <link rel="stylesheet" href="./assets/popup.css?v=art-polish-1">
-  <script defer src="./assets/language.js?v=art-polish-1"></script>
+  <script defer src="./assets/language.js?v=shellex-1"></script>
   <script defer src="./assets/motion.js?v=art-polish-3"></script>
   <script defer src="./assets/shell.js?v=art-polish-2"></script>
   <script defer src="./assets/terrain.js?v=dossier-sections-1"></script>
@@ -21,7 +21,7 @@
   <script defer src="./assets/private-archive.js?v=dragon-copy-1"></script>
   <script defer src="./assets/private-image-view.js?v=dossier-color-window-1"></script>
   <script defer src="./assets/private-entry.js?v=entry-modal-only-1"></script>
-  <script defer src="./assets/archive.js?v=art-polish-1"></script>
+  <script defer src="./assets/archive.js?v=shellex-1"></script>
   <script defer src="./assets/keyboard.js?v=polish-preview-1"></script>
 </head>
 <body>
@@ -149,6 +149,10 @@
               <a class="file-tile" href="#projects/tools/web-video-downloader">
                 <canvas class="file-icon" data-icon="downloader" width="68" height="68" aria-hidden="true"></canvas>
                 <span class="file-name" data-file-text data-i18n="videoDownloader">网页视频下载器</span>
+              </a>
+              <a class="file-tile" href="#projects/tools/shellex-studio">
+                <canvas class="file-icon" data-icon="shellex" width="68" height="68" aria-hidden="true"></canvas>
+                <span class="file-name" data-file-text data-i18n="shellexName">右键菜单管理工具</span>
               </a>
             </div>
           </section>
@@ -289,6 +293,52 @@
             <div class="file-download-group">
               <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/releases/download/web-video-downloader-v1.1.0/web-video-downloader-1.1.0-x64.exe" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
               <a class="file-action file-download" href="https://pan.baidu.com/s/1_5IiR1uzRosNyImlsJmriQ?pwd=vr45" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="baiduDownload">百度网盘下载 ↗</a>
+            </div>
+          </footer>
+        </article>
+        <article class="file-properties" data-file-id="shellex-studio" aria-labelledby="shellex-file-title" hidden>
+          <h2 id="shellex-file-title" class="file-bar" data-file-text data-i18n="shellexName">右键菜单管理工具</h2>
+          <div class="file-body">
+            <div class="file-summary">
+              <dl>
+                <dt data-file-text data-i18n="fileName">文件名</dt><dd data-file-text>ShellExStudio-1.0.1-x64.exe</dd>
+                <dt data-file-text data-i18n="fileVersion">版本</dt><dd data-file-text>v1.0.1</dd>
+                <dt data-file-text data-i18n="fileRequires">运行环境</dt><dd data-file-text>Windows 10 / 11 x64</dd>
+              </dl>
+              <canvas class="file-icon file-art" data-icon="shellex" width="68" height="68" aria-hidden="true"></canvas>
+            </div>
+            <div class="file-divider" aria-hidden="true"></div>
+            <div class="file-description">
+              <h3 data-file-text data-i18n="fileDescription">介绍</h3>
+              <a class="file-source" data-file-text data-i18n="shellexCredit" href="https://www.nirsoft.net/utils/shexview.html" target="_blank" rel="noopener noreferrer">NirSoft · ShellExView 原版 ↗</a>
+              <p data-file-text data-i18n="shellexIntro">ShellEx Studio 把 Windows 右键菜单和其他外壳扩展按第三方、Microsoft 系统组件分组。想知道一个菜单项来自哪个软件，可以按 Ctrl+K 搜索名称、厂商或文件类型，再打开详情查看对应的 DLL 和注册表位置。</p>
+              <section class="asset-example" aria-labelledby="shellex-example-title" data-viewer-key="shellexViewer" data-viewer-title="ShellEx Studio · v1.0.1">
+                <h3 id="shellex-example-title" data-file-text data-i18n="shellexExample">界面示例 · v1.0.1</h3>
+                <div class="preview-pair">
+                  <figure>
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-labelledby="shellex-list-caption asset-preview-hint">
+                      <img class="interface-sample" src="./assets/shellex-list-sample.jpg" width="1280" height="800" loading="lazy" alt="示例扩展按第三方和 Microsoft 分组，列表显示每个扩展的名称、类型和启停状态" data-i18n-alt="shellexListAlt">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
+                    <figcaption id="shellex-list-caption" data-file-text data-i18n="shellexList">按来源查看扩展</figcaption>
+                  </figure>
+                  <figure>
+                    <button type="button" class="preview-thumb" aria-haspopup="dialog" aria-controls="asset-viewer" aria-labelledby="shellex-detail-caption asset-preview-hint">
+                      <img class="interface-sample" src="./assets/shellex-inspector-sample.jpg" width="675" height="675" loading="lazy" alt="7-Zip 扩展的详情面板列出 CLSID、DLL 路径和关联文件类型" data-i18n-alt="shellexDetailAlt">
+                      <span aria-hidden="true">⤢</span>
+                    </button>
+                    <figcaption id="shellex-detail-caption" data-file-text data-i18n="shellexDetail">查看扩展详情</figcaption>
+                  </figure>
+                </div>
+              </section>
+              <p data-file-text data-i18n="shellexManage">可切换 64 位与 32 位扩展，批量启用或禁用，并将列表导出为 CSV 或 JSON。禁用 Microsoft 系统组件前，程序会列出所选组件供确认。</p>
+              <p data-file-text data-i18n="shellexInstall">安装包内含 .NET 桌面运行时。普通权限即可浏览，修改扩展状态时会请求管理员授权。随附的 ShellExView 2.01 可从工具栏单独打开。</p>
+            </div>
+          </div>
+          <footer class="file-actions">
+            <a class="file-action" href="#projects/tools" data-file-text data-i18n="backToTools">返回工具</a>
+            <div class="file-download-group">
+              <a class="file-action file-download" href="https://github.com/zoeazoea717-sketch/zoeazoea717-sketch.github.io/releases/download/shellex-studio-v1.0.1/ShellExStudio-1.0.1-x64.exe" target="_blank" rel="noopener noreferrer" data-file-text data-i18n="githubDownload">GitHub 下载 ↗</a>
             </div>
           </footer>
         </article>
